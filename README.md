@@ -31,7 +31,29 @@
 
 ## 获取与运行
 
-当前开发分支为 **`ccui`**。目前尚未发布本项目的预编译发行包；可用平台和安装步骤将在 [Releases](https://github.com/Zrzzzz/codex-cc-ui/releases) 中说明。`npm install -g @openai/codex` 安装的是官方版本，不包含这里的界面修改。
+当前开发分支为 **`ccui`**。首个预发行版为 [v0.1.0-alpha.1](https://github.com/Zrzzzz/codex-cc-ui/releases/tag/v0.1.0-alpha.1)，支持 **Linux x86_64、glibc 2.39+、OpenSSL 3**。暂不提供 macOS、Windows、ARM64 或 Alpine/musl 发行包。
+
+### 通过 npm 安装发行包
+
+```sh
+npm install -g https://github.com/Zrzzzz/codex-cc-ui/releases/download/v0.1.0-alpha.1/codex-cc-ui-0.1.0-alpha.1.tgz
+codex-cc
+```
+
+这是安装 GitHub Release 中的 npm 格式包，尚未发布到 npm registry。安装后使用独立命令 `codex-cc`，不会覆盖官方 `codex`。`npm install -g @openai/codex` 安装的仍是官方版本。
+
+### 下载独立压缩包
+
+从 [发行页面](https://github.com/Zrzzzz/codex-cc-ui/releases/tag/v0.1.0-alpha.1) 下载 `.tar.gz` 和 `SHA256SUMS`。校验并解压后运行：
+
+```sh
+sha256sum --check --ignore-missing SHA256SUMS
+tar -xzf codex-cc-ui-0.1.0-alpha.1-x86_64-unknown-linux-gnu.tar.gz
+cd codex-cc-ui-0.1.0-alpha.1-x86_64-unknown-linux-gnu
+./codex-cc
+```
+
+请保留完整目录结构，配套程序已包含在包内。首版采用去除符号的未优化开发构建；原生 CLI 的 `--version` 仍显示 `0.0.0`，实际发行版本、源码提交和文件校验值见包内 `BUILD-INFO.json`。
 
 ### 从源码构建
 
