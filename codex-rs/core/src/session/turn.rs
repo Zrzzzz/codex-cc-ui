@@ -1926,6 +1926,7 @@ pub(super) fn realtime_text_for_event(msg: &EventMsg) -> Option<(String, Option<
         | EventMsg::HookStarted(_)
         | EventMsg::HookCompleted(_)
         | EventMsg::AgentMessageContentDelta(_)
+        | EventMsg::ToolCallInputProgress(_)
         | EventMsg::PlanDelta(_)
         | EventMsg::ReasoningContentDelta(_)
         | EventMsg::ReasoningRawContentDelta(_)
@@ -2720,10 +2721,26 @@ async fn try_run_sampling_request(
                 }
             }
             ResponseEvent::ToolCallInputDelta {
-                item_id: _,
+                item_id,
                 call_id,
                 delta,
+                is_custom_tool,
             } => {
+                if !delta.is_empty() {
+                    sess.send_event(
+                        &turn_context,
+                        EventMsg::ToolCallInputProgress(
+                            codex_protocol::protocol::ToolCallInputProgressEvent {
+                                item_id,
+                                delta_bytes: delta.len() as u64,
+                            },
+                        ),
+                    )
+                    .await;
+                }
+                if !is_custom_tool {
+                    continue;
+                }
                 let Some((active_call_id, consumer)) = active_tool_argument_diff_consumer.as_mut()
                 else {
                     continue;

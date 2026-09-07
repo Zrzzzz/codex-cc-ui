@@ -136,6 +136,7 @@ impl ChatWidget {
             remote_connection: None,
             local_worktree_operations: true,
             token_info: None,
+            live_output_tokens: Default::default(),
             token_usage_pending: false,
             rate_limit_snapshots_by_limit_id: BTreeMap::new(),
             refreshing_status_outputs: Vec::new(),

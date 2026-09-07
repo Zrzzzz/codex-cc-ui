@@ -367,7 +367,7 @@ pub fn process_responses_event(
                 return Ok(Some(ResponseEvent::OutputTextDelta(delta)));
             }
         }
-        "response.custom_tool_call_input.delta" => {
+        "response.custom_tool_call_input.delta" | "response.function_call_arguments.delta" => {
             if let (Some(delta), Some(item_id)) =
                 (event.delta, event.item_id.clone().or(event.call_id.clone()))
             {
@@ -375,6 +375,7 @@ pub fn process_responses_event(
                     item_id,
                     call_id: event.call_id,
                     delta,
+                    is_custom_tool: event.kind == "response.custom_tool_call_input.delta",
                 }));
             }
         }
@@ -525,7 +526,6 @@ pub fn process_responses_event(
         | "response.content_part.added"
         | "response.content_part.done"
         | "response.custom_tool_call_input.done"
-        | "response.function_call_arguments.delta"
         | "response.function_call_arguments.done"
         | "response.in_progress"
         | "response.metadata"
@@ -1036,9 +1036,15 @@ mod tests {
                 item_id,
                 call_id: Some(call_id),
                 delta,
+                is_custom_tool: true,
             } if item_id == "ctc_1" && call_id == "call_1" && delta == "*** Begin"
         );
-        assert_matches!(&events[1], ResponseEvent::Completed { .. });
+        assert_matches!(
+            &events[1],
+            ResponseEvent::ToolCallInputDelta { item_id, call_id: None, delta, is_custom_tool: false }
+                if item_id == "fc_1" && delta == "{\"input\":\""
+        );
+        assert_matches!(&events[2], ResponseEvent::Completed { .. });
     }
 
     #[tokio::test]

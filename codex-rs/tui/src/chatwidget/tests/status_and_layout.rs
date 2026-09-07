@@ -2077,7 +2077,7 @@ async fn streaming_final_answer_keeps_task_running_state() {
     drain_insert_history(&mut rx);
 
     assert!(chat.bottom_pane.is_task_running());
-    assert!(!chat.bottom_pane.status_indicator_visible());
+    assert!(chat.bottom_pane.status_indicator_visible());
 
     chat.bottom_pane
         .set_composer_text("queued submission".to_string(), Vec::new(), Vec::new());
@@ -2242,7 +2242,7 @@ fn assert_goal_paused_event(
 }
 
 #[tokio::test]
-async fn idle_commit_ticks_do_not_restore_status_without_commentary_completion() {
+async fn idle_commit_ticks_preserve_live_output_status() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
 
     chat.on_task_started();
@@ -2252,16 +2252,16 @@ async fn idle_commit_ticks_do_not_restore_status_without_commentary_completion()
     chat.on_commit_tick();
     drain_insert_history(&mut rx);
 
-    assert_eq!(chat.bottom_pane.status_indicator_visible(), false);
+    assert_eq!(chat.bottom_pane.status_indicator_visible(), true);
     assert_eq!(chat.bottom_pane.is_task_running(), true);
 
-    // A second idle tick should not toggle the row back on and cause jitter.
+    // Idle ticks must not flicker the live counter off and back on.
     chat.on_commit_tick();
-    assert_eq!(chat.bottom_pane.status_indicator_visible(), false);
+    assert_eq!(chat.bottom_pane.status_indicator_visible(), true);
 }
 
 #[tokio::test]
-async fn final_answer_completion_restores_status_indicator_for_pending_steer() {
+async fn final_answer_completion_preserves_status_indicator_for_pending_steer() {
     let (mut chat, mut rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.thread_id = Some(ThreadId::new());
 
@@ -2275,7 +2275,7 @@ async fn final_answer_completion_restores_status_indicator_for_pending_steer() {
     chat.on_commit_tick();
     drain_insert_history(&mut rx);
 
-    assert_eq!(chat.bottom_pane.status_indicator_visible(), false);
+    assert_eq!(chat.bottom_pane.status_indicator_visible(), true);
     assert_eq!(chat.bottom_pane.is_task_running(), true);
 
     chat.bottom_pane.set_composer_text(
@@ -2320,7 +2320,7 @@ async fn final_answer_completion_restores_status_indicator_for_pending_steer() {
 }
 
 #[tokio::test]
-async fn commentary_completion_restores_status_indicator_before_exec_begin() {
+async fn commentary_completion_preserves_status_indicator_before_exec_begin() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
 
     chat.on_task_started();
@@ -2330,7 +2330,7 @@ async fn commentary_completion_restores_status_indicator_before_exec_begin() {
     chat.on_commit_tick();
     drain_insert_history(&mut rx);
 
-    assert_eq!(chat.bottom_pane.status_indicator_visible(), false);
+    assert_eq!(chat.bottom_pane.status_indicator_visible(), true);
 
     complete_assistant_message(
         &mut chat,
@@ -2789,13 +2789,13 @@ async fn stream_error_updates_status_indicator() {
 }
 
 #[tokio::test]
-async fn stream_error_restores_hidden_status_indicator() {
+async fn stream_error_updates_live_status_indicator() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.on_task_started();
     chat.on_agent_message_delta("Preamble line\n".to_string());
     chat.on_commit_tick();
     drain_insert_history(&mut rx);
-    assert!(!chat.bottom_pane.status_indicator_visible());
+    assert!(chat.bottom_pane.status_indicator_visible());
 
     let msg = "Reconnecting... 2/5";
     let details = "Idle timeout waiting for SSE";
@@ -4689,7 +4689,7 @@ async fn newline_plan_delta_redraws_stream_tail_after_noop_catch_up() {
     chat.on_task_started();
     chat.on_plan_delta("Earlier line\n".to_string());
     chat.on_commit_tick();
-    assert!(!chat.bottom_pane.status_indicator_visible());
+    assert!(chat.bottom_pane.status_indicator_visible());
     while draw_rx.try_recv().is_ok() {}
 
     chat.on_plan_delta("Intro line\n| Step | Owner |\n".to_string());
@@ -4774,7 +4774,7 @@ async fn reasoning_delta_does_not_double_schedule_visible_status_redraw() {
 }
 
 #[tokio::test]
-async fn reasoning_delta_restores_recreated_status_indicator_header() {
+async fn reasoning_header_survives_streaming_and_tool_start() {
     let (mut chat, mut rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.on_task_started();
     chat.on_agent_reasoning_delta("**Checking files**".to_string());
@@ -4782,14 +4782,14 @@ async fn reasoning_delta_restores_recreated_status_indicator_header() {
     chat.on_agent_message_delta("Preamble line\n".to_string());
     chat.on_commit_tick();
     drain_insert_history(&mut rx);
-    assert!(!chat.bottom_pane.status_indicator_visible());
+    assert!(chat.bottom_pane.status_indicator_visible());
 
     begin_unified_exec_startup(&mut chat, "call-1", "proc-1", "sleep 2");
     let status = chat
         .bottom_pane
         .status_widget()
-        .expect("status indicator should be recreated");
-    assert_eq!(status.header(), "Working");
+        .expect("live status indicator should remain visible");
+    assert_eq!(status.header(), "Checking files");
 
     chat.on_agent_reasoning_delta(" and preparing a response".to_string());
 
@@ -5755,4 +5755,51 @@ async fn chatwidget_tall() {
         "chatwidget_tall",
         normalize_snapshot_paths(term.backend().vt100().screen().contents())
     );
+}
+#[tokio::test]
+async fn live_output_tokens_update_before_newline_and_reconcile_usage() {
+    let (mut chat, _rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+    chat.local_settings.tui.status_line = Some(vec!["model-with-reasoning".into()]);
+    chat.on_task_started();
+    chat.on_agent_message_delta("abcdefgh".into());
+    assert!(render_bottom_popup(&chat, 80).contains("Working (↓ ~2 tokens"));
+    chat.on_agent_message_delta("ijkl".into());
+    assert!(render_bottom_popup(&chat, 80).contains("Working (↓ ~3 tokens"));
+    let mut usage = make_token_info(/*total_tokens*/ 100, /*context_window*/ 1000);
+    usage.total_token_usage.output_tokens = 20;
+    usage.last_token_usage.output_tokens = 20;
+    chat.set_token_info(Some(usage));
+    assert!(render_bottom_popup(&chat, 80).contains("Working (↓ 20 tokens"));
+    assert!(!status_line_text(&chat).unwrap_or_default().contains("out"));
+    let snapshot = render_bottom_popup(&chat, 40);
+    insta::assert_snapshot!("live_output_tokens_during_stream", snapshot);
+    chat.on_task_started();
+    chat.refresh_status_line();
+    assert_eq!(chat.live_output_tokens.working_label(), None);
+    chat.on_agent_message_delta("abcd\n".into());
+    chat.on_commit_tick();
+    assert!(chat.bottom_pane.status_widget().is_some());
+    chat.bottom_pane.set_task_running(/*running*/ false);
+    assert!(chat.bottom_pane.status_widget().is_none());
+}
+#[tokio::test]
+async fn tool_input_progress_updates_working_counter_and_ignores_other_turns() {
+    let (mut chat, _rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+    handle_turn_started(&mut chat, "live-turn");
+    let progress = |turn: &str, bytes| {
+        ServerNotification::ToolCallInputProgress(
+            codex_app_server_protocol::ToolCallInputProgressNotification {
+                thread_id: "thread".into(),
+                turn_id: turn.into(),
+                item_id: "tool".into(),
+                delta_bytes: bytes,
+            },
+        )
+    };
+    chat.handle_server_notification(progress("previous-turn", 80), /*replay_kind*/ None);
+    assert_eq!(chat.live_output_tokens.working_label(), None);
+    chat.handle_server_notification(progress("live-turn", 8), /*replay_kind*/ None);
+    assert!(render_bottom_popup(&chat, 80).contains("↓ ~2 tokens"));
+    chat.handle_server_notification(progress("live-turn", 8), /*replay_kind*/ None);
+    assert!(render_bottom_popup(&chat, 80).contains("↓ ~4 tokens"));
 }

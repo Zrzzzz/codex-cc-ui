@@ -169,7 +169,7 @@ impl HistoryCell for UserHistoryCell {
             )
             .max(1);
 
-        let style = user_message_style();
+        let style = Style::default();
         let element_style = style.fg(Color::Cyan);
 
         let wrapped_remote_images = if self.remote_image_urls.is_empty() {
@@ -246,7 +246,8 @@ impl HistoryCell for UserHistoryCell {
             return Vec::new();
         }
 
-        let mut lines = vec![HyperlinkLine::new(Line::from("").style(style))];
+        let rule = Line::from("─".repeat(usize::from(width)).dim());
+        let mut lines = vec![HyperlinkLine::new(rule.clone())];
 
         if let Some(wrapped_remote_images) = wrapped_remote_images {
             lines.extend(prefix_hyperlink_lines(
@@ -267,7 +268,7 @@ impl HistoryCell for UserHistoryCell {
             ));
         }
 
-        lines.push(HyperlinkLine::new(Line::from("").style(style)));
+        lines.push(HyperlinkLine::new(rule));
         lines
     }
 

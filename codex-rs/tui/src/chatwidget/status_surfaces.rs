@@ -778,6 +778,7 @@ impl ChatWidget {
                     format_tokens_compact(self.status_line_total_usage().output_tokens)
                 )
             }),
+            StatusLineItem::TurnOutputTokens => self.live_output_tokens.label(),
             StatusLineItem::ThreadCredits => self
                 .estimated_thread_usage()
                 .map(|usage| usage.estimated_usage_credits_micros)
@@ -853,6 +854,7 @@ impl ChatWidget {
             StatusSurfacePreviewItem::UsedTokens => StatusLineItem::UsedTokens,
             StatusSurfacePreviewItem::TotalInputTokens => StatusLineItem::TotalInputTokens,
             StatusSurfacePreviewItem::TotalOutputTokens => StatusLineItem::TotalOutputTokens,
+            StatusSurfacePreviewItem::TurnOutputTokens => StatusLineItem::TurnOutputTokens,
             StatusSurfacePreviewItem::ThreadCredits => StatusLineItem::ThreadCredits,
             StatusSurfacePreviewItem::EstimatedThreadCost => StatusLineItem::EstimatedThreadCost,
             StatusSurfacePreviewItem::SessionId => StatusLineItem::SessionId,

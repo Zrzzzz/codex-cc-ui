@@ -1930,6 +1930,10 @@ There are additional item-specific events:
 
 - `item/agentMessage/delta` — appends streamed text for the agent message; concatenate `delta` values for the same `itemId` in order to reconstruct the full reply.
 
+#### toolCall
+
+- `item/toolCall/inputProgress` (experimental) reports `threadId`, `turnId`, `itemId`, and `deltaBytes` while the model generates custom-tool input or function arguments. `deltaBytes` is the UTF-8 byte count of the new fragment; it contains no script or argument text. This can arrive before the tool's `item/started` event, because generation precedes execution. It is transient display metadata, not authoritative token usage, and is not replayed. Clients must opt into `experimentalApi` to receive it.
+
 #### plan
 
 - `item/plan/delta` — streams proposed plan content for plan items (experimental); concatenate `delta` values for the same plan `itemId`. These deltas correspond to the `<proposed_plan>` block.

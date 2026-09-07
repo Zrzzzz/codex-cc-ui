@@ -19,6 +19,7 @@ use super::popup_state::ActivePopup;
 use crate::bottom_pane::BottomPane;
 use crate::color::blend;
 use crate::terminal_palette::StdoutColorLevel;
+use crate::terminal_palette::default_bg;
 use crate::terminal_palette::default_fg;
 use crate::terminal_palette::effective_stdout_color_level;
 use crate::terminal_palette::rgb_color;
@@ -109,7 +110,12 @@ fn render_stars(
             {
                 continue;
             }
-            let Color::Rgb(r, g, b) = cell.bg else {
+            let background = match cell.bg {
+                Color::Rgb(r, g, b) => Some((r, g, b)),
+                Color::Reset => default_bg(),
+                _ => None,
+            };
+            let Some(background) = background else {
                 continue;
             };
             // A stable coordinate hash gives each star its own dot, period, and phase.
@@ -128,7 +134,7 @@ fn render_stars(
             }
             buf[(x, y)]
                 .set_symbol(DOTS[(hash / 161 % 8) as usize])
-                .set_fg(rgb_color(blend(foreground, (r, g, b), brightness)));
+                .set_fg(rgb_color(blend(foreground, background, brightness)));
         }
     }
 }

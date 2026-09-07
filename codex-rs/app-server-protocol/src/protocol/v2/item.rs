@@ -1425,6 +1425,19 @@ pub struct AgentMessageDeltaNotification {
     pub delta: String,
 }
 
+/// Model-generated tool input progress. Carries only UTF-8 byte counts, never arguments.
+/// This is ephemeral display metadata, not authoritative usage or execution progress.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+#[ts(export_to = "v2/")]
+pub struct ToolCallInputProgressNotification {
+    pub thread_id: String,
+    pub turn_id: String,
+    pub item_id: String,
+    #[ts(type = "number")]
+    pub delta_bytes: u64,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export_to = "v2/")]

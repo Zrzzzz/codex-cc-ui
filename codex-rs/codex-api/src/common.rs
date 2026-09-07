@@ -131,6 +131,8 @@ pub enum ResponseEvent {
         item_id: String,
         call_id: Option<String>,
         delta: String,
+        /// Only freeform custom-tool input may feed a patch preview consumer.
+        is_custom_tool: bool,
     },
     ReasoningSummaryDelta {
         delta: String,

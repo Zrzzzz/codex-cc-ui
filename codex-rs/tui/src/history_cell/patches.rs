@@ -11,6 +11,16 @@ pub(crate) struct PatchHistoryCell {
 
 impl HistoryCell for PatchHistoryCell {
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
+        crate::tool_preview::summary(
+            create_diff_summary(&self.changes, &self.cwd, usize::from(u16::MAX))
+                .into_iter()
+                .next()
+                .unwrap_or_default(),
+            width,
+        )
+    }
+
+    fn transcript_lines(&self, width: u16) -> Vec<Line<'static>> {
         create_diff_summary(&self.changes, &self.cwd, width as usize)
     }
 

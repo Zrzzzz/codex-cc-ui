@@ -584,6 +584,7 @@ pub(crate) struct ChatWidget {
     pub(crate) remote_connection: Option<RemoteConnectionStatus>,
     pub(crate) local_worktree_operations: bool,
     token_info: Option<TokenUsageInfo>,
+    live_output_tokens: crate::live_output_tokens::LiveOutputTokens,
     token_usage_pending: bool,
     // Status and polling use account usage reads; response streams may identify meters differently.
     rate_limit_snapshots_by_limit_id: BTreeMap<String, RateLimitSnapshotDisplay>,
@@ -1133,6 +1134,10 @@ impl ChatWidget {
     }
 
     fn apply_token_info(&mut self, info: TokenUsageInfo) {
+        self.live_output_tokens.reconcile(
+            info.total_token_usage.output_tokens,
+            info.last_token_usage.output_tokens,
+        );
         self.token_usage_pending = false;
         self.bottom_pane
             .set_context_window_pending(/*pending*/ false);
@@ -1140,6 +1145,7 @@ impl ChatWidget {
         let used_tokens = self.context_used_tokens(&info, percent.is_some());
         self.bottom_pane.set_context_window(percent, used_tokens);
         self.token_info = Some(info);
+        self.refresh_live_output_status();
     }
 
     fn context_remaining_percent(&self, info: &TokenUsageInfo) -> Option<i64> {
@@ -1976,6 +1982,8 @@ impl ChatWidget {
 
     pub(crate) fn clear_token_usage(&mut self) {
         self.token_info = None;
+        self.live_output_tokens = Default::default();
+        self.refresh_live_output_status();
     }
 }
 

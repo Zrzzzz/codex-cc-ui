@@ -577,6 +577,7 @@ export type { ThreadUnsubscribeStatus } from "./ThreadUnsubscribeStatus";
 export type { ThreadUsage } from "./ThreadUsage";
 export type { ThreadUsageBreakdownGroup } from "./ThreadUsageBreakdownGroup";
 export type { TokenUsageBreakdown } from "./TokenUsageBreakdown";
+export type { ToolCallInputProgressNotification } from "./ToolCallInputProgressNotification";
 export type { ToolRequestUserInputAnswer } from "./ToolRequestUserInputAnswer";
 export type { ToolRequestUserInputOption } from "./ToolRequestUserInputOption";
 export type { ToolRequestUserInputParams } from "./ToolRequestUserInputParams";

@@ -3094,6 +3094,7 @@ async fn remote_resume_rejects_explicit_permission_override() -> Result<()> {
         SessionTarget {
             thread_id: ThreadId::new(),
             path: None,
+            cwd: None,
             history_mode: None,
         },
     )
@@ -4008,7 +4009,7 @@ async fn inactive_thread_file_change_approval_recovers_buffered_changes() {
     };
     let rendered = lines_to_single_string(&cell.display_lines(/*width*/ 80));
     assert!(rendered.contains("• Added README.md (+1 -0)"));
-    assert!(rendered.contains("1 +hello"));
+    assert!(lines_to_single_string(&cell.transcript_lines(/*width*/ 80)).contains("1 +hello"));
 }
 
 #[tokio::test]

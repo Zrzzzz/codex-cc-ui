@@ -133,6 +133,46 @@ fn result(content: Vec<Value>) -> CallToolResult {
 }
 
 #[test]
+fn compact_mcp_preview_retains_arguments_and_full_text_in_transcript() {
+    let mut snapshots = Vec::new();
+    for is_error in [false, true] {
+        let mut cell = McpToolCallCell::new(
+            "call".into(),
+            McpInvocation {
+                server: "files".into(),
+                tool: "read".into(),
+                arguments: Some(json!({"path": "example.rs"})),
+            },
+            /*animations_enabled*/ false,
+        );
+        let mut output = result(vec![json!({
+            "type": "text",
+            "text": (0..30).map(|i| format!("result line {i}\n")).collect::<String>(),
+        })]);
+        output.is_error = Some(is_error);
+        cell.complete(Duration::from_secs(1), Ok(output));
+        let preview = cell.display_lines(/*width*/ 60);
+        let transcript = cell.transcript_lines(/*width*/ 60);
+        assert_eq!(preview.len(), 1);
+        assert!(
+            !preview
+                .iter()
+                .any(|line| line.to_string().contains("result line"))
+        );
+        let full = transcript
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(full.contains("example.rs"));
+        assert!(full.contains("result line 15"));
+        assert!(full.contains("result line 29"));
+        snapshots.push((is_error, preview));
+    }
+    insta::assert_debug_snapshot!(snapshots);
+}
+
+#[test]
 fn projected_content_preserves_width_dependent_rendering() {
     let text = "{\"result\": [1, 2, 3], \"text\": \"long output 🦀\"}";
     let malformed = json!({"type": "image", "data": PNG});
@@ -228,12 +268,10 @@ fn code_mode_preserves_text_fields_on_nontext_and_unknown_blocks() {
         .join("\n");
     insta::assert_snapshot!(format!("history:\n{display}\n\ntranscript:\n{transcript}"), @r#"
     history:
-    • Called Inspect results
-      └ image-side output
-        unknown-side output
+    ● node_repl.js · completed (ctrl+t)
 
     transcript:
-    • Called node_repl.js({"title":"Inspect results"})
+    ● Called node_repl.js({"title":"Inspect results"})
       └ Script completed
         Output:
         image-side output
@@ -276,14 +314,12 @@ fn code_mode_preserves_text_fields_on_nontext_and_unknown_blocks() {
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join("\n");
-    insta::assert_snapshot!(format!("history:\n{display}\n\ntranscript:\n{transcript}"), @r"
+    insta::assert_snapshot!(format!("history:\n{display}\n\ntranscript:\n{transcript}"), @"
     history:
-    • Called cua_repl.js
-      └ image-side output
-        unknown-side output
+    ● cua_repl.js · completed (ctrl+t)
 
     transcript:
-    • Called cua_repl.js()
+    ● Called cua_repl.js()
       └ Script completed
         Output:
         image-side output

@@ -1920,6 +1920,9 @@ server_notification_definitions! {
     /// This event is internal-only. Used by clients that need exact upstream usage.
     RawResponseCompleted => "rawResponse/completed" (v2::RawResponseCompletedNotification),
     AgentMessageDelta => "item/agentMessage/delta" (v2::AgentMessageDeltaNotification),
+    /// Transient output progress while the model generates tool inputs.
+    #[experimental("item/toolCall/inputProgress")]
+    ToolCallInputProgress => "item/toolCall/inputProgress" (v2::ToolCallInputProgressNotification),
     /// EXPERIMENTAL - proposed plan streaming deltas for plan items.
     PlanDelta => "item/plan/delta" (v2::PlanDeltaNotification),
     /// Stream base64-encoded stdout/stderr chunks for a running `command/exec` session.

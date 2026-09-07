@@ -5,6 +5,8 @@ mod focus_palette;
 mod reconnect;
 mod resize_reflow;
 mod status_indicator;
+#[cfg(unix)]
+mod tool_input_progress;
 mod vt100_history;
 mod vt100_live_commit;
 #[cfg(unix)]

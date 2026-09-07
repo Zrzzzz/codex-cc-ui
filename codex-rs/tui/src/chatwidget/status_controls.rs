@@ -113,6 +113,18 @@ impl ChatWidget {
         self.refresh_status_surfaces();
     }
 
+    pub(super) fn refresh_live_output_status(&mut self) {
+        self.bottom_pane
+            .set_live_output_tokens(self.live_output_tokens.working_label());
+        if self
+            .configured_status_line_items()
+            .iter()
+            .any(|item| item == "turn-output-tokens")
+        {
+            self.refresh_status_line();
+        }
+    }
+
     /// Records that status-line setup was canceled.
     ///
     /// Cancellation is intentionally side-effect free for config state; the existing configuration

@@ -1,6 +1,6 @@
 //! A live task status row rendered above the composer while the agent is busy.
 //!
-//! The row renders a separately owned clock, the optional interrupt hint, and short inline
+//! The row renders a separately owned clock, live output tokens, the optional interrupt hint, and short inline
 //! context (for example, the unified-exec background-process summary). Keeping
 //! these pieces on one line avoids vertical layout churn in the bottom pane.
 //! Hook activity uses the remaining space or its own line on overflow, so it
@@ -36,6 +36,9 @@ use crate::width::display_width;
 use crate::wrapping::RtOptions;
 use crate::wrapping::word_wrap_lines;
 
+#[cfg(test)]
+#[path = "status_indicator_widget/live_output_tests.rs"]
+mod live_output_tests;
 mod timer;
 pub(crate) use timer::StatusTimer;
 
@@ -56,6 +59,7 @@ pub(crate) struct StatusIndicatorWidget {
     details_max_lines: usize,
     /// Optional suffix rendered after the elapsed/interrupt segment.
     inline_message: Option<String>,
+    output_tokens: Option<String>,
     /// Hook activity may move below the status row when it cannot fit in full.
     hook_status_message: Option<String>,
     show_interrupt_hint: bool,
@@ -94,6 +98,7 @@ impl StatusIndicatorWidget {
             details: None,
             details_max_lines: STATUS_DETAILS_DEFAULT_MAX_LINES,
             inline_message: None,
+            output_tokens: None,
             hook_status_message: None,
             show_interrupt_hint: true,
             interrupt_binding: Some(key_hint::plain(KeyCode::Esc).into()),
@@ -105,6 +110,10 @@ impl StatusIndicatorWidget {
 
     pub(crate) fn interrupt(&self) {
         self.app_event_tx.interrupt();
+    }
+
+    pub(crate) fn update_output_tokens(&mut self, label: Option<String>) {
+        self.output_tokens = label;
     }
 
     /// Update the animated header label (left of the brackets).
@@ -231,17 +240,38 @@ impl StatusIndicator<'_> {
         if !spans.is_empty() {
             spans.push(" ".into());
         }
+        let mut timing = Vec::new();
+        let prefix = row.output_tokens.as_ref().map_or_else(
+            || format!("({pretty_elapsed}"),
+            |tokens| format!("({tokens} · {pretty_elapsed}"),
+        );
         if row.show_interrupt_hint
             && let Some(interrupt_binding) = row.interrupt_binding
         {
-            spans.extend(vec![
-                format!("({pretty_elapsed} • ").dim(),
+            timing.extend(vec![
+                format!("{prefix} • ").dim(),
                 interrupt_binding.into(),
-                " to interrupt)".dim(),
+                if row.output_tokens.is_some() && width < 60 {
+                    ")".dim()
+                } else {
+                    " to interrupt)".dim()
+                },
             ]);
         } else {
-            spans.push(format!("({pretty_elapsed})").dim());
+            timing.push(format!("{prefix})").dim());
         }
+        if row.output_tokens.is_some() {
+            let reserved = Line::from(timing.clone()).width().saturating_add(1);
+            let header = truncate_line_with_ellipsis_if_overflow(
+                Line::from(spans),
+                usize::from(width).saturating_sub(reserved),
+            );
+            spans = header.spans;
+            if !spans.is_empty() && !spans.last().is_some_and(|span| span.content.ends_with(' ')) {
+                spans.push(" ".into());
+            }
+        }
+        spans.extend(timing);
         if let Some(message) = &row.inline_message {
             // Keep optional context after elapsed/interrupt text so that core
             // interrupt affordances stay in a fixed visual location.

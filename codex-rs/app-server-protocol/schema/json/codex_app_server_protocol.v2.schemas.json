@@ -16232,6 +16232,27 @@
           "type": "object"
         },
         {
+          "description": "Transient output progress while the model generates tool inputs.",
+          "properties": {
+            "method": {
+              "enum": [
+                "item/toolCall/inputProgress"
+              ],
+              "title": "Item/toolCall/inputProgressNotificationMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/ToolCallInputProgressNotification"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "title": "Item/toolCall/inputProgressNotification",
+          "type": "object"
+        },
+        {
           "description": "EXPERIMENTAL - proposed plan streaming deltas for plan items.",
           "properties": {
             "method": {
@@ -22163,6 +22184,34 @@
         "inputSchema",
         "name"
       ],
+      "type": "object"
+    },
+    "ToolCallInputProgressNotification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "description": "Model-generated tool input progress. Carries only UTF-8 byte counts, never arguments. This is ephemeral display metadata, not authoritative usage or execution progress.",
+      "properties": {
+        "deltaBytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "itemId": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "turnId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "deltaBytes",
+        "itemId",
+        "threadId",
+        "turnId"
+      ],
+      "title": "ToolCallInputProgressNotification",
       "type": "object"
     },
     "ToolsV2": {

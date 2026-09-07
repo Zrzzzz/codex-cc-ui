@@ -138,14 +138,15 @@ impl McpToolCallCell {
         let node_repl = self.result_kind() == McpResultKind::NodeRepl;
         let compact = node_repl && mode == McpToolCallRenderMode::Display;
         let bullet = match status {
-            Some(true) => "•".green().bold(),
-            Some(false) => "•".red().bold(),
+            Some(true) => "●".green().bold(),
+            Some(false) => "●".red().bold(),
             None => activity_indicator(
                 Some(self.start_time),
                 MotionMode::from_animations_enabled(self.animations_enabled),
                 ReducedMotionIndicator::StaticBullet,
             )
-            .unwrap_or_else(|| "•".dim()),
+            .map(|span| Span::styled("●", span.style))
+            .unwrap_or_else(|| "●".dim()),
         };
         let header_text = if status.is_some() {
             "Called"
@@ -165,6 +166,8 @@ impl McpToolCallCell {
                 .map(|title| title.graphemes(true).take(80).collect::<String>())
                 .unwrap_or_else(|| format!("{}.{}", self.invocation.server, self.invocation.tool));
             Line::from(title.cyan())
+        } else if mode == McpToolCallRenderMode::Display {
+            Line::from(format!("{}.{}", self.invocation.server, self.invocation.tool).cyan())
         } else {
             line_to_static(&format_mcp_invocation(&self.invocation))
         };
@@ -220,8 +223,7 @@ impl McpToolCallCell {
                                     ),
                                     None => block.render(detail_wrap_width),
                                 }
-                            } else if node_repl
-                                && mode == McpToolCallRenderMode::Transcript
+                            } else if mode == McpToolCallRenderMode::Transcript
                                 && let Some(output) = block.text()
                             {
                                 output.trim_end_matches('\n').to_string()
@@ -243,7 +245,7 @@ impl McpToolCallCell {
                 }
                 Err(err) => {
                     let err_text = format!("Error: {err}");
-                    let err_text = if node_repl && mode == McpToolCallRenderMode::Transcript {
+                    let err_text = if mode == McpToolCallRenderMode::Transcript {
                         err_text
                     } else {
                         format_and_truncate_tool_result(
@@ -279,7 +281,29 @@ impl McpToolCallCell {
 
 impl HistoryCell for McpToolCallCell {
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        self.render_lines(width, McpToolCallRenderMode::Display)
+        if let Some(success) = self.success() {
+            return crate::tool_preview::summary(
+                Line::from(vec![
+                    if success {
+                        "● ".green()
+                    } else {
+                        "● ".red()
+                    },
+                    format!("{}.{}", self.invocation.server, self.invocation.tool).bold(),
+                    if success {
+                        " · completed".dim()
+                    } else {
+                        " · failed".red()
+                    },
+                ]),
+                width,
+            );
+        }
+        crate::tool_preview::collapse(
+            self.render_lines(width, McpToolCallRenderMode::Display),
+            width,
+            /*limit*/ 8,
+        )
     }
 
     fn transcript_lines(&self, width: u16) -> Vec<Line<'static>> {

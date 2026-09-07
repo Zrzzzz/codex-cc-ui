@@ -6124,6 +6124,32 @@
       ],
       "type": "object"
     },
+    "ToolCallInputProgressNotification": {
+      "description": "Model-generated tool input progress. Carries only UTF-8 byte counts, never arguments. This is ephemeral display metadata, not authoritative usage or execution progress.",
+      "properties": {
+        "deltaBytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "itemId": {
+          "type": "string"
+        },
+        "threadId": {
+          "type": "string"
+        },
+        "turnId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "deltaBytes",
+        "itemId",
+        "threadId",
+        "turnId"
+      ],
+      "type": "object"
+    },
     "Turn": {
       "properties": {
         "completedAt": {
@@ -7360,6 +7386,27 @@
         "params"
       ],
       "title": "Item/agentMessage/deltaNotification",
+      "type": "object"
+    },
+    {
+      "description": "Transient output progress while the model generates tool inputs.",
+      "properties": {
+        "method": {
+          "enum": [
+            "item/toolCall/inputProgress"
+          ],
+          "title": "Item/toolCall/inputProgressNotificationMethod",
+          "type": "string"
+        },
+        "params": {
+          "$ref": "#/definitions/ToolCallInputProgressNotification"
+        }
+      },
+      "required": [
+        "method",
+        "params"
+      ],
+      "title": "Item/toolCall/inputProgressNotification",
       "type": "object"
     },
     {

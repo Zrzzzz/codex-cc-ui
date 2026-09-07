@@ -2,7 +2,7 @@
 source: tui/src/history_cell/tests.rs
 expression: "render_lines(&cell.display_lines(width)).join(\"\\n\")"
 ---
-
+────────────────────────────────────────────────────────────────
 › Skip tests.
   
   I just reprocessed
@@ -12,3 +12,4 @@ expression: "render_lines(&cell.display_lines(width)).join(\"\\n\")"
   can you check where we are with it?
   
   [Image #1]
+────────────────────────────────────────────────────────────────

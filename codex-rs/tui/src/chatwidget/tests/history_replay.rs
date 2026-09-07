@@ -1276,22 +1276,15 @@ async fn failed_repl_mcp_tool_call_preserves_status_and_result() {
             panic!("expected one completed MCP tool call for {server}");
         };
         insta::allow_duplicates! {
-            insta::assert_snapshot!(lines_to_single_string(lines), @r#"
-            • Called Inspect workspace
-              └ Script failed
-                {"exit_code": 0, "output": "ready", "chunk_id": "chunk-1"}
-                Script error:
-                permission denied
-            "#);
+            insta::assert_snapshot!(lines_to_single_string(lines).replace(server, "repl"), @"● repl.js · failed (ctrl+t)");
         }
         assert_eq!(
             lines.first(),
             Some(&Line::from(vec![
-                "•".red().bold(),
-                " ".into(),
-                "Called".bold(),
-                " ".into(),
-                "Inspect workspace".cyan(),
+                "● ".red(),
+                format!("{server}.js").bold(),
+                " · failed".red(),
+                " (ctrl+t)".dim(),
             ])),
             "{server}",
         );
@@ -1355,7 +1348,10 @@ async fn deferred_mcp_lifecycle_events_keep_fifo_after_stream_finishes() {
         .into_iter()
         .map(|lines| lines_to_single_string(&lines))
         .collect::<String>();
-    assert!(rendered.contains("deferred result"), "{rendered}");
+    assert!(
+        rendered.contains("copilot-bridge.copilot · completed"),
+        "{rendered}"
+    );
 }
 
 #[tokio::test]

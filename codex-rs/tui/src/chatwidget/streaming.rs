@@ -139,12 +139,18 @@ impl ChatWidget {
     }
 
     pub(super) fn on_agent_message_delta(&mut self, delta: String) {
+        if self.live_output_tokens.push(&delta) {
+            self.refresh_live_output_status();
+        }
         self.handle_streaming_delta(delta);
     }
 
     pub(super) fn on_plan_delta(&mut self, delta: String) {
         if self.active_mode_kind() != ModeKind::Plan {
             return;
+        }
+        if self.live_output_tokens.push(&delta) {
+            self.refresh_live_output_status();
         }
         if !self.transcript.plan_item_active {
             self.transcript.plan_item_active = true;

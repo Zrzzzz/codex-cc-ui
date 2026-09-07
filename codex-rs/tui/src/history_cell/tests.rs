@@ -1382,16 +1382,10 @@ fn code_mode_tool_call_uses_title_and_preserves_full_transcript() {
     let transcript = render_lines(&cell.transcript_lines(/*width*/ 180)).join("\n");
     insta::assert_snapshot!(format!("history:\n{history}\n\ntranscript:\n{transcript}"), @r#"
     history:
-    • Called Inspect Spotify workspace
-      └ 012345678901234567890123456789012345
-            67890123456789012345678901234567
-            89012345678901234567890123456789
-            01234567890123456789012345678901
-            23456789012345678901234567890123
-            45678901...
+    ● node_repl.js · completed (ctrl+t)
 
     transcript:
-    • Called node_repl.js({"title":"Inspect Spotify workspace","code":"await tools.exec_command({ cmd: 'git status' })"})
+    ● Called node_repl.js({"title":"Inspect Spotify workspace","code":"await tools.exec_command({ cmd: 'git status' })"})
       └ Script completed
         Wall time 0.1 seconds
         Output:
@@ -1426,13 +1420,10 @@ fn code_mode_tool_call_preserves_failure_details() {
     let transcript = render_lines(&cell.transcript_lines(/*width*/ 120)).join("\n");
     insta::assert_snapshot!(format!("history:\n{history}\n\ntranscript:\n{transcript}"), @r#"
     history:
-    • Called Inspect workspace
-      └ Script failed
-        Output:
-        permission denied
+    ● node_repl.js · failed (ctrl+t)
 
     transcript:
-    • Called node_repl.js({"title":"Inspect workspace","code":"throw Error('denied')"})
+    ● Called node_repl.js({"title":"Inspect workspace","code":"throw Error('denied')"})
       └ Script failed
         Output:
         permission denied
@@ -2419,9 +2410,11 @@ fn user_history_cell_trims_trailing_blank_message_lines() {
     let trailing_blank_count = rendered
         .iter()
         .rev()
+        .skip(1)
         .take_while(|line| line.trim().is_empty())
         .count();
-    assert_eq!(trailing_blank_count, 1);
+    assert_eq!(rendered.last(), Some(&"─".repeat(80)));
+    assert_eq!(trailing_blank_count, 0);
     assert!(rendered.iter().any(|line| line.contains("line one")));
 }
 
@@ -2442,9 +2435,11 @@ fn user_history_cell_trims_trailing_blank_message_lines_with_text_elements() {
     let trailing_blank_count = rendered
         .iter()
         .rev()
+        .skip(1)
         .take_while(|line| line.trim().is_empty())
         .count();
-    assert_eq!(trailing_blank_count, 1);
+    assert_eq!(rendered.last(), Some(&"─".repeat(80)));
+    assert_eq!(trailing_blank_count, 0);
     assert!(rendered.iter().any(|line| line.contains("tokenized")));
 }
 
@@ -2486,7 +2481,7 @@ fn render_uses_wrapping_for_long_url_like_line() {
     let rendered_blob = rendered.join("\n");
     let rendered_url = rendered
         .iter()
-        .filter(|row| !row.trim().is_empty())
+        .filter(|row| !row.trim().is_empty() && !row.chars().all(|ch| ch == '─'))
         .enumerate()
         .map(|(index, row)| {
             if index == 0 {

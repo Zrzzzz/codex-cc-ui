@@ -1,0 +1,5 @@
+---
+source: tui/src/tool_preview_tests.rs
+expression: "preview.iter().map(ToString::to_string).collect::<Vec<_>>().join(\"\\n\")"
+---
+• Added example.rs (+50 -0) (ctrl+t)

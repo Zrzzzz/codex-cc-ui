@@ -66,6 +66,7 @@ mod apply_patch_header;
 mod approval_overlay;
 mod async_questions;
 mod hook_status;
+mod live_output;
 mod mcp_server_elicitation;
 mod multi_select_picker;
 #[cfg(test)]
@@ -265,6 +266,7 @@ pub(crate) struct BottomPane {
     status: Option<StatusIndicatorWidget>,
     /// Running-hook summary supplied by the lifecycle owner after its reveal delay.
     hook_status_message: Option<String>,
+    live_output_tokens: Option<String>,
     inline_banner: Option<actionable_banner::InlineBanner>,
     /// Streaming may drop the row without losing its elapsed time or modal pause.
     status_timer: crate::status_indicator_widget::StatusTimer,
@@ -340,6 +342,7 @@ impl BottomPane {
             is_task_running: false,
             status: None,
             hook_status_message: None,
+            live_output_tokens: None,
             inline_banner: None,
             status_timer: crate::status_indicator_widget::StatusTimer::default(),
             unified_exec_footer: UnifiedExecFooter::new(),
@@ -1207,6 +1210,7 @@ impl BottomPane {
             }
         } else {
             // Hide the status indicator when a task completes, but keep other modal views.
+            self.live_output_tokens = None;
             self.hide_status_indicator();
         }
     }
@@ -1215,8 +1219,12 @@ impl BottomPane {
         self.composer.set_queue_submissions(queue_submissions);
     }
 
-    /// Hide the status indicator while leaving task-running state untouched.
+    /// Hide the status row unless it carries an active turn's output counter.
     pub(crate) fn hide_status_indicator(&mut self) {
+        // Keep the token counter visible while the answer is streaming.
+        if self.is_task_running && self.live_output_tokens.is_some() {
+            return;
+        }
         if self.status.take().is_some() {
             self.request_redraw();
         }
@@ -1542,6 +1550,7 @@ impl BottomPane {
         if let Some(status) = self.status.as_mut() {
             status.update_inline_message(self.unified_exec_footer.summary_text());
             status.update_hook_status_message(self.hook_status_message.clone());
+            status.update_output_tokens(self.live_output_tokens.clone());
         }
     }
 

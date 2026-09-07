@@ -1542,6 +1542,8 @@ pub enum EventMsg {
     HookCompleted(HookCompletedEvent),
 
     AgentMessageContentDelta(AgentMessageContentDeltaEvent),
+    /// Transient model-generated tool input byte counts, not tool execution output.
+    ToolCallInputProgress(ToolCallInputProgressEvent),
     PlanDelta(PlanDeltaEvent),
     ReasoningContentDelta(ReasoningContentDeltaEvent),
     ReasoningRawContentDelta(ReasoningRawContentDeltaEvent),
@@ -1957,6 +1959,13 @@ pub struct AgentMessageContentDeltaEvent {
     pub turn_id: String,
     pub item_id: String,
     pub delta: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, TS, JsonSchema)]
+pub struct ToolCallInputProgressEvent {
+    pub item_id: String,
+    #[ts(type = "number")]
+    pub delta_bytes: u64,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, TS, JsonSchema)]

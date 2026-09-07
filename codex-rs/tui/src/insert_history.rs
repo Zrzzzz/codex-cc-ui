@@ -896,7 +896,7 @@ mod tests {
         let message_rows = rows
             .iter()
             .enumerate()
-            .filter(|(_, row)| !row.trim().is_empty())
+            .filter(|(_, row)| !row.trim().is_empty() && !row.chars().all(|ch| ch == '─'))
             .collect::<Vec<_>>();
 
         assert!(message_rows.len() > 1, "expected wrapped URL: {rows:?}");

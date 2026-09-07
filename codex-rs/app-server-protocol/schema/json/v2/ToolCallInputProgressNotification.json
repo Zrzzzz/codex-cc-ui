@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Model-generated tool input progress. Carries only UTF-8 byte counts, never arguments. This is ephemeral display metadata, not authoritative usage or execution progress.",
+  "properties": {
+    "deltaBytes": {
+      "format": "uint64",
+      "minimum": 0.0,
+      "type": "integer"
+    },
+    "itemId": {
+      "type": "string"
+    },
+    "threadId": {
+      "type": "string"
+    },
+    "turnId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "deltaBytes",
+    "itemId",
+    "threadId",
+    "turnId"
+  ],
+  "title": "ToolCallInputProgressNotification",
+  "type": "object"
+}
