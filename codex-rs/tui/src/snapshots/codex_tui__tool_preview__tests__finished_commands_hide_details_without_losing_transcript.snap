@@ -1,0 +1,36 @@
+---
+source: tui/src/tool_preview_tests.rs
+expression: snapshots
+---
+[
+    (
+        0,
+        10,
+        "● Bash · 1\ncall ·\ncompleted\n(ctrl+t)",
+    ),
+    (
+        0,
+        40,
+        "● Bash · 1 call · completed (ctrl+t)",
+    ),
+    (
+        0,
+        80,
+        "● Bash · 1 call · completed (ctrl+t)",
+    ),
+    (
+        1,
+        10,
+        "● Bash · 1\ncall · 1\nfailed\n(ctrl+t)",
+    ),
+    (
+        1,
+        40,
+        "● Bash · 1 call · 1 failed (ctrl+t)",
+    ),
+    (
+        1,
+        80,
+        "● Bash · 1 call · 1 failed (ctrl+t)",
+    ),
+]

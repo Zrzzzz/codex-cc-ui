@@ -1,0 +1,28 @@
+---
+source: tui/src/history_cell/mcp_tests.rs
+expression: snapshots
+---
+[
+    (
+        false,
+        [
+            Line::from_iter([
+                Span::from("● ").green(),
+                Span::from("files.read").bold(),
+                Span::from(" · completed").dim(),
+                Span::from(" (ctrl+t)").dim(),
+            ]),
+        ],
+    ),
+    (
+        true,
+        [
+            Line::from_iter([
+                Span::from("● ").red(),
+                Span::from("files.read").bold(),
+                Span::from(" · failed").red(),
+                Span::from(" (ctrl+t)").dim(),
+            ]),
+        ],
+    ),
+]

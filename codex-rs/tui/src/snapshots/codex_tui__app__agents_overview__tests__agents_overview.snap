@@ -21,8 +21,9 @@ expression: "render_bottom_popup(&app.chat_widget,\n96).replace(&format!(\"{proj
                                                       │ Prompt
                                                       │ Build the dashboard
                                                       │
-                                                      │
-                                                      │
-                                                      │
-                                                      │
-  ? help  esc back  ↑/↓ move  enter open  n new
+  New task
+────────────────────────────────────────────────────────────────────────────────────────────────
+› First line
+  Second line
+────────────────────────────────────────────────────────────────────────────────────────────────
+   enter create task    ctrl+j newline    esc tasks

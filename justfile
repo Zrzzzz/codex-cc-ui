@@ -175,7 +175,7 @@ write-config-schema:
 
 # Regenerate app-server protocol schemas and the Python SDK derived from them.
 write-app-server-schema *args:
-    {{ python }} app-server-protocol/scripts/write_schema_fixtures.py {args}
+    {{ python }} app-server-protocol/scripts/write_schema_fixtures.py "$@"
 
 [no-cd]
 write-hooks-schema:

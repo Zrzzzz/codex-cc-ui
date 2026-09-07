@@ -117,13 +117,32 @@ impl ChatWidget {
                 self.restore_realtime_transcripts_before_turn(&notification.turn_id);
                 self.on_plan_delta(notification.delta);
             }
-            ServerNotification::ReasoningSummaryTextDelta(notification) => {
-                if !self.is_realtime_delegated_reasoning_item(
-                    &notification.turn_id,
-                    &notification.item_id,
-                ) && self.status_state.reasoning_item_id.as_deref()
-                    == Some(&notification.item_id)
+            ServerNotification::ToolCallInputProgress(notification) => {
+                if self.turn_lifecycle.last_turn_id.as_deref()
+                    == Some(notification.turn_id.as_str())
+                    && self.live_output_tokens.push_bytes(notification.delta_bytes)
                 {
+                    self.refresh_live_output_status();
+                }
+            }
+            ServerNotification::PlanDelta(notification) => self.on_plan_delta(notification.delta),
+            ServerNotification::ReasoningSummaryTextDelta(notification) => {
+                if self.live_output_tokens.push_reasoning(
+                    &notification.delta,
+                    crate::live_output_tokens::ReasoningStream::Summary,
+                ) {
+                    self.refresh_live_output_status();
+                }
+                self.on_agent_reasoning_delta(notification.delta);
+            }
+            ServerNotification::ReasoningTextDelta(notification) => {
+                if self.live_output_tokens.push_reasoning(
+                    &notification.delta,
+                    crate::live_output_tokens::ReasoningStream::Raw,
+                ) {
+                    self.refresh_live_output_status();
+                }
+                if self.config.show_raw_agent_reasoning {
                     self.on_agent_reasoning_delta(notification.delta);
                 }
             }

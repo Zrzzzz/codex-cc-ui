@@ -1,6 +1,5 @@
 ---
-source: tui/src/history_cell.rs
+source: tui/src/history_cell/tests.rs
 expression: rendered
 ---
-• Ran echo ok
-  └ (no output)
+● Bash · 1 call · completed (ctrl+t)

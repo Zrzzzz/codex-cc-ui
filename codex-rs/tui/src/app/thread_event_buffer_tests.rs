@@ -13,6 +13,20 @@ use codex_app_server_protocol::TurnStartedNotification;
 use codex_protocol::ThreadId;
 use pretty_assertions::assert_eq;
 
+#[test]
+fn tool_input_progress_is_not_replayed() {
+    let mut store = ThreadEventStore::new(/*capacity*/ 4);
+    store.push_notification(ServerNotification::ToolCallInputProgress(
+        codex_app_server_protocol::ToolCallInputProgressNotification {
+            thread_id: ThreadId::new().to_string(),
+            turn_id: "turn".into(),
+            item_id: "tool".into(),
+            delta_bytes: 8,
+        },
+    ));
+    assert!(store.buffer.is_empty());
+}
+
 fn turn_started_notification(thread_id: ThreadId, turn_id: &str) -> ServerNotification {
     ServerNotification::TurnStarted(TurnStartedNotification {
         thread_id: thread_id.to_string(),

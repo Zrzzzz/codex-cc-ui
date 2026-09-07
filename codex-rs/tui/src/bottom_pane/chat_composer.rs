@@ -4910,12 +4910,12 @@ impl ChatComposer {
                 }
             }
         }
-        self.footer.warning_notice_area.set(warning_area);
-        if let Some((warning_area, line)) = warning_notice {
-            line.render(warning_area, buf);
-        }
-        let style = user_message_style();
-        Block::default().style(style).render(composer_rect, buf);
+        let style = Style::default();
+        Block::default()
+            .style(style)
+            .borders(ratatui::widgets::Borders::TOP | ratatui::widgets::Borders::BOTTOM)
+            .border_style(Style::default().dim())
+            .render(composer_rect, buf);
         if !remote_images_rect.is_empty() {
             Paragraph::new(self.attachments.remote_image_lines())
                 .style(style)
@@ -5122,10 +5122,7 @@ mod tests {
             let mut buffer = Buffer::empty(area);
             composer.render(area, &mut buffer);
 
-            assert_eq!(
-                buffer[(0, 1)].bg,
-                crate::terminal_palette::rgb_color((244, 244, 244))
-            );
+            assert_eq!(buffer[(0, 1)].bg, Color::Reset);
             insta::assert_snapshot!("light_terminal_palette_composer", format!("{buffer:?}"));
         });
     }
@@ -5173,14 +5170,14 @@ mod tests {
 
         assert!(
             hint_row_idx > 0,
-            "expected a spacing row above the footer hints",
+            "expected a border row above the footer hints",
         );
 
         let spacing_row = row_to_string(hint_row_idx - 1);
         assert_eq!(
             spacing_row.trim(),
-            "",
-            "expected blank spacing row above hints but saw: {spacing_row:?}",
+            "─".repeat(usize::from(area.width)),
+            "expected a border row above hints but saw: {spacing_row:?}",
         );
     }
 

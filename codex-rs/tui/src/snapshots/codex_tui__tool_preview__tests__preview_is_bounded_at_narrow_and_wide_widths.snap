@@ -1,0 +1,46 @@
+---
+source: tui/src/tool_preview_tests.rs
+expression: snapshots
+---
+[
+    (
+        1,
+        [
+            "●",
+            "C",
+            "a",
+            "l",
+            "…",
+        ],
+    ),
+    (
+        10,
+        [
+            "● Called",
+            "tools.read",
+            "  └ output",
+            "output",
+            "…",
+        ],
+    ),
+    (
+        20,
+        [
+            "● Called tools.read",
+            "  └ output output",
+            "output output output",
+            "output output output",
+            "… (ctrl+t)",
+        ],
+    ),
+    (
+        80,
+        [
+            "● Called tools.read",
+            "  └ output output output output output output output output output output output",
+            "output output output output output output output output output output output",
+            "output output output output output output output output output output output",
+            "  └ … (ctrl+t to expand)",
+        ],
+    ),
+]

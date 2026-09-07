@@ -28,6 +28,7 @@ use super::FooterMode;
 use super::InputResult;
 use crate::bottom_pane::BottomPane;
 use crate::terminal_palette::StdoutColorLevel;
+use crate::terminal_palette::default_bg;
 use crate::terminal_palette::default_fg;
 use crate::terminal_palette::effective_stdout_color_level;
 
@@ -257,41 +258,21 @@ impl ChatComposer {
                     }
                 }
             }
-        }
-    }
-
-    pub(super) fn note_sparkle_paste(&self, text: &str) {
-        if self.history_search.is_some() {
-            return;
-        }
-        if self.sparkle.draft.get() != SparkleDraft::Command
-            && !(self.is_empty() && self.is_sparkle_command(text))
-        {
-            self.stop_visible_sparkle();
-        }
-        if !text.is_empty() && self.draft.textarea.vim_query().is_none() {
-            match self.sparkle.draft.get() {
-                SparkleDraft::Untouched if self.is_empty() && self.is_sparkle_command(text) => {
-                    self.sparkle.draft.set(SparkleDraft::Command);
-                    self.sparkle.command_input.replace(text.to_string());
-                }
-                SparkleDraft::Command => {
-                    let mut projected = self.sparkle.command_input.borrow().clone();
-                    let actual = self.current_text();
-                    let cursor = if actual == projected {
-                        self.current_cursor()
-                    } else {
-                        projected.len()
-                    };
-                    projected.insert_str(cursor, text);
-                    if self.is_sparkle_command(&projected) {
-                        self.sparkle.command_input.replace(projected);
-                    } else {
-                        self.dismiss_sparkle();
-                    }
-                }
-                SparkleDraft::Untouched => self.dismiss_sparkle(),
-                SparkleDraft::Dismissed => {}
+            let background = match cell.bg {
+                Color::Rgb(r, g, b) => Some((r, g, b)),
+                Color::Reset => default_bg(),
+                _ => None,
+            };
+            let Some(background) = background else {
+                continue;
+            };
+            // A stable coordinate hash gives each star its own dot, period, and phase.
+            let mut hash = u64::from(y - area.y) * 65537 + u64::from(x - area.x);
+            hash = (hash ^ (hash >> 16)).wrapping_mul(0x45d9f3b);
+            hash = (hash ^ (hash >> 16)).wrapping_mul(0x45d9f3b);
+            hash ^= hash >> 16;
+            if hash % 5 != 0 {
+                continue;
             }
         }
     }
@@ -302,121 +283,9 @@ impl ChatComposer {
                 self.sparkle.draft.set(SparkleDraft::Untouched);
                 self.sparkle.command_input.borrow_mut().clear();
             }
-            SparkleDraft::Command if self.is_sparkle_command(text) => {
-                self.sparkle.command_input.replace(text.to_string());
-            }
-            SparkleDraft::Untouched if text.is_empty() => {}
-            SparkleDraft::Untouched | SparkleDraft::Command => self.dismiss_sparkle(),
-            SparkleDraft::Dismissed => {}
-        }
-    }
-
-    fn is_sparkle_command(&self, text: &str) -> bool {
-        let Some(body) = text.strip_prefix('/') else {
-            return false;
-        };
-        if !self.slash_commands_enabled() || self.draft.is_bash_mode || text.contains(['\n', '\r'])
-        {
-            return false;
-        }
-        let split = body.find(char::is_whitespace).unwrap_or(body.len());
-        let (name, rest) = body.split_at(split);
-        if rest.is_empty() {
-            self.slash_input().is_editing_command_name(text, text.len())
-                || self.slash_input().command(name).is_some()
-        } else {
-            self.slash_input()
-                .command(name)
-                .is_some_and(|command| rest.trim().is_empty() || command.supports_inline_args())
-        }
-    }
-
-    pub(super) fn render_sparkle(
-        &self,
-        area: Rect,
-        textarea: Rect,
-        cursor: Option<(u16, u16)>,
-        buf: &mut Buffer,
-    ) {
-        self.render_sparkle_at(area, textarea, cursor, Instant::now(), buf);
-    }
-
-    fn render_sparkle_at(
-        &self,
-        area: Rect,
-        textarea: Rect,
-        cursor: Option<(u16, u16)>,
-        now: Instant,
-        buf: &mut Buffer,
-    ) {
-        if self.history_search.is_none()
-            && self.draft.textarea.vim_query().is_none()
-            && !self.is_empty()
-        {
-            let is_command = self.sparkle.draft.get() == SparkleDraft::Command
-                && self.is_sparkle_command(&self.current_text())
-                && self.attachments.is_empty();
-            if !is_command {
-                self.dismiss_sparkle();
-            }
-        }
-        let since = match self.sparkle.phase.get() {
-            Phase::Visible(since) => Some(since),
-            Phase::Waiting => None,
-            Phase::Unarmed | Phase::Finished => return,
-        };
-        let elapsed = since.map_or(Duration::ZERO, |since| now.saturating_duration_since(since));
-        if elapsed >= IDLE_TIMEOUT {
-            self.stop_visible_sparkle();
-            return;
-        }
-        if !self.has_focus
-            || !self.sparkle.terminal_focused
-            || !self.is_empty()
-            || self.sparkle.draft.get() == SparkleDraft::Command
-            || self.draft.paste_burst.is_active()
-            || !self.draft.input_enabled
-            || self.is_task_running
-            || self.voice_strip.is_some()
-            || self.popup_active()
-            || self.footer_mode() == FooterMode::ShortcutOverlay
-            || area.height < 3
-            || textarea.is_empty()
-            || effective_stdout_color_level() != StdoutColorLevel::TrueColor
-        {
-            return;
-        }
-        let Some(foreground) = default_fg() else {
-            return;
-        };
-        if since.is_none() {
-            self.sparkle.phase.set(Phase::Visible(now));
-        }
-        let fade_start = IDLE_TIMEOUT - IDLE_FADE;
-        let visibility = if elapsed > fade_start {
-            (IDLE_TIMEOUT - elapsed).as_secs_f32() / IDLE_FADE.as_secs_f32()
-        } else {
-            1.0
-        };
-        let protected = Rect::new(
-            textarea.x,
-            textarea.y,
-            self.placeholder_text
-                .width()
-                .min(usize::from(textarea.width)) as u16,
-            /*height*/ 1,
-        );
-        field::render_stars(
-            area,
-            cursor,
-            Some(protected),
-            elapsed.min(fade_start),
-            foreground,
-            visibility,
-            buf,
-        );
-        if let Some(requester) = &self.frame_requester {
-            requester.schedule_frame_in(FRAME_TICK.min(IDLE_TIMEOUT - elapsed));
+            buf[(x, y)]
+                .set_symbol(DOTS[(hash / 161 % 8) as usize])
+                .set_fg(rgb_color(blend(foreground, background, brightness)));
         }
     }
 }

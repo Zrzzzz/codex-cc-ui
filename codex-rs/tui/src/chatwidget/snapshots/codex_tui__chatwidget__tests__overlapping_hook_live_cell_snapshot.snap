@@ -7,10 +7,10 @@ activity:
 "                                                                                "
 "• Thinking (0s • esc to interrupt) · checking command policy                    "
 "                                                                                "
-"                                                                                "
+"────────────────────────────────────────────────────────────────────────────────"
 "› Ask Codex to do anything                                                      "
-"                                                                                "
-"  GPT-5.6-Sol default · /tmp/project                                            "
+"────────────────────────────────────────────────────────────────────────────────"
+"  gpt-5.6-sol default · /tmp/project                                            "
 history:
 <empty>
 
@@ -19,10 +19,10 @@ activity:
 "                                                                                "
 "• Thinking (0s • esc to interrupt) · Running hooks                              "
 "                                                                                "
-"                                                                                "
+"────────────────────────────────────────────────────────────────────────────────"
 "› Ask Codex to do anything                                                      "
-"                                                                                "
-"  GPT-5.6-Sol default · /tmp/project                                            "
+"────────────────────────────────────────────────────────────────────────────────"
+"  gpt-5.6-sol default · /tmp/project                                            "
 history:
 <empty>
 
@@ -31,10 +31,10 @@ activity:
 "                                                                                "
 "• Thinking (0s • esc to interrupt) · checking output policy                     "
 "                                                                                "
-"                                                                                "
+"────────────────────────────────────────────────────────────────────────────────"
 "› Ask Codex to do anything                                                      "
-"                                                                                "
-"  GPT-5.6-Sol default · /tmp/project                                            "
+"────────────────────────────────────────────────────────────────────────────────"
+"  gpt-5.6-sol default · /tmp/project                                            "
 history:
 <empty>
 
@@ -43,9 +43,9 @@ activity:
 "                                                                                "
 "• Thinking (0s • esc to interrupt)                                              "
 "                                                                                "
-"                                                                                "
+"────────────────────────────────────────────────────────────────────────────────"
 "› Ask Codex to do anything                                                      "
-"                                                                                "
-"  GPT-5.6-Sol default · /tmp/project                                            "
+"────────────────────────────────────────────────────────────────────────────────"
+"  gpt-5.6-sol default · /tmp/project                                            "
 history:
 <empty>

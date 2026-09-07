@@ -5240,6 +5240,27 @@
           "type": "object"
         },
         {
+          "description": "Transient output progress while the model generates tool inputs.",
+          "properties": {
+            "method": {
+              "enum": [
+                "item/toolCall/inputProgress"
+              ],
+              "title": "Item/toolCall/inputProgressNotificationMethod",
+              "type": "string"
+            },
+            "params": {
+              "$ref": "#/definitions/v2/ToolCallInputProgressNotification"
+            }
+          },
+          "required": [
+            "method",
+            "params"
+          ],
+          "title": "Item/toolCall/inputProgressNotification",
+          "type": "object"
+        },
+        {
           "description": "EXPERIMENTAL - proposed plan streaming deltas for plan items.",
           "properties": {
             "method": {
@@ -25516,31 +25537,33 @@
         ],
         "type": "object"
       },
-      "ToolExposureSurface": {
-        "description": "A model-facing surface on which a tool can be exposed.",
-        "oneOf": [
-          {
-            "description": "Nested tools available to Code Mode scripts.",
-            "enum": [
-              "code_mode"
-            ],
+      "ToolCallInputProgressNotification": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "description": "Model-generated tool input progress. Carries only UTF-8 byte counts, never arguments. This is ephemeral display metadata, not authoritative usage or execution progress.",
+        "properties": {
+          "deltaBytes": {
+            "format": "uint64",
+            "minimum": 0.0,
+            "type": "integer"
+          },
+          "itemId": {
             "type": "string"
           },
-          {
-            "description": "Tools discovered later through tool search.",
-            "enum": [
-              "deferred"
-            ],
+          "threadId": {
             "type": "string"
           },
-          {
-            "description": "Tools present in the model's initial tool list.",
-            "enum": [
-              "direct"
-            ],
+          "turnId": {
             "type": "string"
           }
-        ]
+        },
+        "required": [
+          "deltaBytes",
+          "itemId",
+          "threadId",
+          "turnId"
+        ],
+        "title": "ToolCallInputProgressNotification",
+        "type": "object"
       },
       "ToolsV2": {
         "properties": {

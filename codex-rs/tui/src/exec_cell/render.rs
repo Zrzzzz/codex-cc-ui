@@ -205,7 +205,8 @@ fn activity_marker(start_time: Option<Instant>, animations_enabled: bool) -> Spa
         MotionMode::from_animations_enabled(animations_enabled),
         ReducedMotionIndicator::StaticBullet,
     )
-    .unwrap_or_else(|| "•".dim())
+    .map(|span| Span::styled("●", span.style))
+    .unwrap_or_else(|| "●".dim())
 }
 
 impl HistoryCell for ExecCell {
@@ -266,10 +267,41 @@ impl HistoryCell for ExecCell {
     }
 
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        visible_lines(self.display_hyperlink_lines(width))
-    }
-
-    fn display_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
+        if !self.is_active() && !self.calls.iter().any(ExecCall::is_user_shell_command) {
+            let failed = self
+                .calls
+                .iter()
+                .filter(|call| {
+                    call.output
+                        .as_ref()
+                        .is_some_and(|output| output.exit_code != 0)
+                })
+                .count();
+            let label = if self.is_exploring_cell() {
+                "Explored"
+            } else {
+                "Bash"
+            };
+            let status = if failed == 0 {
+                "completed".to_string()
+            } else {
+                format!("{failed} failed")
+            };
+            let count = self.calls.len();
+            let noun = if count == 1 { "call" } else { "calls" };
+            return crate::tool_preview::summary(
+                Line::from(vec![
+                    if failed == 0 {
+                        "● ".green()
+                    } else {
+                        "● ".red()
+                    },
+                    label.bold(),
+                    format!(" · {count} {noun} · {status}").dim(),
+                ]),
+                width,
+            );
+        }
         if self.is_exploring_cell() {
             self.exploring_display_lines(width)
         } else {
@@ -308,24 +340,27 @@ impl ExecCell {
         Line::from(vec![Self::output_ellipsis_text(omitted).dim()])
     }
 
-    fn exploring_display_lines(&self, width: u16) -> Vec<HyperlinkLine> {
-        let mut out: Vec<HyperlinkLine> = Vec::new();
-        out.push(
-            Line::from(vec![
-                if self.is_active() {
-                    activity_marker(self.active_start_time(), self.animations_enabled())
-                } else {
-                    "•".dim()
-                },
-                " ".into(),
-                if self.is_active() {
-                    "Exploring".bold()
-                } else {
-                    "Explored".bold()
-                },
-            ])
-            .into(),
-        );
+    fn exploring_display_lines(&self, width: u16) -> Vec<Line<'static>> {
+        let mut out: Vec<Line<'static>> = Vec::new();
+        out.push(Line::from(vec![
+            if self.is_active() {
+                activity_marker(self.active_start_time(), self.animations_enabled())
+            } else if self.calls.iter().any(|call| {
+                call.output
+                    .as_ref()
+                    .is_some_and(|output| output.exit_code != 0)
+            }) {
+                "●".red().bold()
+            } else {
+                "●".green().bold()
+            },
+            " ".into(),
+            if self.is_active() {
+                "Exploring".bold()
+            } else {
+                "Explored".bold()
+            },
+        ]));
 
         let mut calls = self.group.calls.as_slice();
         let mut out_indented = Vec::new();
@@ -458,19 +493,17 @@ impl ExecCell {
             .duration
             .and_then(|_| call.output.as_ref().map(|o| o.exit_code == 0));
         let bullet = match success {
-            Some(true) => "•".green().bold(),
-            Some(false) => "•".red().bold(),
+            Some(true) => "●".green().bold(),
+            Some(false) => "●".red().bold(),
             None => activity_marker(call.start_time, self.animations_enabled()),
         };
         let is_interaction = call.is_unified_exec_interaction();
         let title = if is_interaction {
             ""
-        } else if self.is_active() {
-            "Running"
         } else if call.is_user_shell_command() {
             "You ran"
         } else {
-            "Ran"
+            "Bash"
         };
 
         let header_line = if is_interaction {
@@ -1124,8 +1157,8 @@ mod tests {
             .map(render_line_text)
             .join("\n");
 
-        insta::assert_snapshot!(rendered, @r"
-        • Exploring
+        insta::assert_snapshot!(rendered, @"
+        ● Exploring
           └ Read SKILL.md
         ");
     }
@@ -1232,7 +1265,7 @@ mod tests {
             .collect();
 
         assert_eq!(first, second);
-        assert_eq!(first, vec!["• Running echo done".to_string()]);
+        assert_eq!(first, vec!["● Bash echo done".to_string()]);
     }
 
     #[test]

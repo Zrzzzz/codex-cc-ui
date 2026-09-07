@@ -38,19 +38,17 @@ impl HistoryCell for PatchHistoryCell {
     }
 
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        visible_lines(self.display_hyperlink_lines(width))
-    }
-
-    fn display_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
-        crate::diff_render::create_diff_summary_with_links(
-            &self.changes,
-            &self.cwd,
-            usize::from(width),
+        crate::tool_preview::summary(
+            create_diff_summary(&self.changes, &self.cwd, usize::from(u16::MAX))
+                .into_iter()
+                .next()
+                .unwrap_or_default(),
+            width,
         )
     }
 
-    fn transcript_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
-        self.display_hyperlink_lines(width)
+    fn transcript_lines(&self, width: u16) -> Vec<Line<'static>> {
+        create_diff_summary(&self.changes, &self.cwd, width as usize)
     }
 
     fn raw_lines(&self) -> Vec<Line<'static>> {

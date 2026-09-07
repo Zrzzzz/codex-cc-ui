@@ -20,9 +20,10 @@ expression: rendered
 
 
 
-
-
-
-
-
-  ? help  esc back  ↑/↓ move  enter open  n n…
+  New task
+────────────────────────────────────────────────
+› Describe a new task
+────────────────────────────────────────────────
+  ↑↓ navigate ctrl+o resume enter open ctrl+n
+  new task ctrl+f search ctrl+s group ctrl+r
+  rename ctrl+x stop esc back

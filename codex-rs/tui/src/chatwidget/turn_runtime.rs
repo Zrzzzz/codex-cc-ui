@@ -75,7 +75,11 @@ impl ChatWidget {
     // Raw reasoning uses the same flow as summarized reasoning
 
     pub(super) fn on_task_started(&mut self) {
-        self.bottom_pane.dismiss_composer_sparkle();
+        self.live_output_tokens.start(
+            self.token_info
+                .as_ref()
+                .map(|info| info.total_token_usage.output_tokens),
+        );
         self.clear_context_compaction();
         self.input_queue.user_turn_pending_start = false;
         self.reset_safety_buffering_for_turn_start();
@@ -105,8 +109,7 @@ impl ChatWidget {
         self.reasoning_summary_parts.clear();
         self.reasoning_buffer.clear();
         self.reasoning_header = None;
-        self.status_state.reasoning_item_id = None;
-        self.status_state.reasoning_resume_turn_id = None;
+        self.refresh_live_output_status();
         self.set_ambient_pet_notification(
             crate::pets::PetNotificationKind::Running,
             /*body*/ None,

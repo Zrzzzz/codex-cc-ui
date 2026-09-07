@@ -359,6 +359,14 @@ pub fn item_event_to_server_notification(
                 completed_at_ms: end_event.completed_at_ms,
             })
         }
+        EventMsg::ToolCallInputProgress(event) => ServerNotification::ToolCallInputProgress(
+            crate::protocol::v2::ToolCallInputProgressNotification {
+                thread_id,
+                turn_id,
+                item_id: event.item_id,
+                delta_bytes: event.delta_bytes,
+            },
+        ),
         EventMsg::AgentMessageContentDelta(event) => {
             let codex_protocol::protocol::AgentMessageContentDeltaEvent { item_id, delta, .. } =
                 event;
@@ -609,6 +617,24 @@ mod tests {
                 item_id: "call-1".to_string(),
                 delta: "hello".to_string(),
             },
+        );
+    }
+
+    #[test]
+    fn tool_input_progress_exposes_only_routing_and_byte_count() {
+        let notification = item_event_to_server_notification(
+            EventMsg::ToolCallInputProgress(codex_protocol::protocol::ToolCallInputProgressEvent {
+                item_id: "tool-1".into(),
+                delta_bytes: 8,
+            }),
+            "thread-1",
+            "turn-1",
+        );
+        assert_eq!(
+            serde_json::to_value(notification).expect("serialize progress"),
+            serde_json::json!({"method":"item/toolCall/inputProgress", "params":{
+                "threadId":"thread-1", "turnId":"turn-1", "itemId":"tool-1", "deltaBytes":8
+            }}),
         );
     }
 }

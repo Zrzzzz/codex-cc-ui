@@ -2,8 +2,7 @@
 source: tui/src/chatwidget/tests/exec_flow.rs
 expression: normalize_completion_timestamps(& (combined))
 ---
-• Ran echo preparing
-  └ preparing
+● Bash · 1 call · completed (ctrl+t)
 
 • Final response.
 

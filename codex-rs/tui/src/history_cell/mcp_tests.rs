@@ -136,211 +136,47 @@ fn result(content: Vec<Value>) -> CallToolResult {
 }
 
 #[test]
-fn mcp_preview_shares_one_limit_across_blocks_and_preserves_transcript() {
-    let mut cell = new_active_mcp_tool_call(
-        "call-preview".into(),
-        McpInvocation {
-            server: "search".into(),
-            tool: "lookup".into(),
-            arguments: Some(json!({"title": "Search query"})),
-        },
-        /*animations_enabled*/ false,
-    );
-    cell.complete(
-        Duration::ZERO,
-        Ok(result(vec![
-            json!({"type": "text", "text": "first\nsecond"}),
-            json!({"type": "text", "text": "third\nfourth\nfifth"}),
-        ])),
-    );
-    let display = cell.display_lines(/*width*/ 80);
-    let transcript = cell.transcript_lines(/*width*/ 80);
-    insta::assert_snapshot!(format!(
-        "compact:\n{}\n\nhistory:\n{}\n\ntranscript:\n{}",
-        visible_lines(cell.compact_hyperlink_lines(/*width*/ 80))
+fn compact_mcp_preview_retains_arguments_and_full_text_in_transcript() {
+    let mut snapshots = Vec::new();
+    for is_error in [false, true] {
+        let mut cell = McpToolCallCell::new(
+            "call".into(),
+            McpInvocation {
+                server: "files".into(),
+                tool: "read".into(),
+                arguments: Some(json!({"path": "example.rs"})),
+            },
+            /*animations_enabled*/ false,
+        );
+        let mut output = result(vec![json!({
+            "type": "text",
+            "text": (0..30).map(|i| format!("result line {i}\n")).collect::<String>(),
+        })]);
+        output.is_error = Some(is_error);
+        cell.complete(Duration::from_secs(1), Ok(output));
+        let preview = cell.display_lines(/*width*/ 60);
+        let transcript = cell.transcript_lines(/*width*/ 60);
+        assert_eq!(preview.len(), 1);
+        assert!(
+            !preview
+                .iter()
+                .any(|line| line.to_string().contains("result line"))
+        );
+        let full = transcript
             .iter()
             .map(ToString::to_string)
             .collect::<Vec<_>>()
-            .join("\n"),
-        display
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join("\n"),
-        transcript
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join("\n"),
-    ));
-    assert_eq!(
-        cell.raw_lines()
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>(),
-        [
-            "Called search.lookup({\"title\":\"Search query\"})",
-            "first",
-            "second",
-            "third",
-            "fourth",
-            "fifth"
-        ],
-    );
-}
-
-#[test]
-fn code_mode_output_shares_a_row_budget_across_blocks() {
-    let mut cell = new_active_mcp_tool_call(
-        "browser-call".to_string(),
-        McpInvocation {
-            server: "node_repl".to_string(),
-            tool: "js".to_string(),
-            arguments: Some(json!({"title": "Inspect page", "code": "await tab.snapshot()"})),
-        },
-        /*animations_enabled*/ false,
-    );
-    cell.complete(
-        Duration::ZERO,
-        Ok(result(vec![
-            json!({"type": "text", "text": "Script completed\nOutput:\n"}),
-            json!({"type": "text", "text": "Page title\nNavigation\nMain content"}),
-            json!({"type": "text", "text": "Button\nLink\nFooter"}),
-        ])),
-    );
-
-    let display = cell
-        .display_lines(/*width*/ 40)
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join("\n");
-    insta::assert_snapshot!(display, @r"
-    • Inspect page
-      └ Page title
-        Navigation
-        Main content
-        +3 lines (ctrl+t to view transcript)
-    ");
-    let transcript = cell
-        .transcript_lines(/*width*/ 100)
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join("\n");
-    assert!(transcript.contains("await tab.snapshot()"));
-    assert!(transcript.ends_with("    Button\n    Link\n    Footer"));
-}
-
-#[test]
-fn code_mode_output_preserves_trailing_failure_diagnostics_in_transcript() {
-    let mut cell = new_active_mcp_tool_call(
-        "browser-error".to_string(),
-        McpInvocation {
-            server: "node_repl".to_string(),
-            tool: "js".to_string(),
-            arguments: Some(json!({"title": "Inspect page"})),
-        },
-        /*animations_enabled*/ false,
-    );
-    cell.complete(
-        Duration::ZERO,
-        Ok(CallToolResult {
-            is_error: Some(true),
-            ..result(vec![
-                json!({"type": "text", "text": "Script failed"}),
-                json!({"type": "text", "text": "Page title\nNavigation\nMain content\nButton\nLink\nFooter"}),
-                json!({"type": "text", "text": "Script error:\npermission denied"}),
-            ])
-        }),
-    );
-    let display = cell
-        .display_lines(/*width*/ 40)
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join("\n");
-    insta::assert_snapshot!(display, @r"
-    • Inspect page
-      └ Script failed
-        Page title
-        Navigation
-        +6 lines (ctrl+t to view transcript)
-    ");
-    let transcript = cell
-        .transcript_lines(/*width*/ 80)
-        .iter()
-        .map(ToString::to_string)
-        .collect::<Vec<_>>()
-        .join("\n");
-    assert!(transcript.ends_with("    Script error:\n    permission denied"));
-}
-
-#[test]
-fn code_mode_output_row_budget_applies_after_wrapping_and_to_errors() {
-    let output = format!("{}\ntranscript tail", "Browser 页面 👩‍💻\n".repeat(40));
-    for server in ["node_repl", "cua_repl"] {
-        for completion in [
-            Ok(result(vec![json!({"type": "text", "text": output})])),
-            Ok(result(vec![json!({
-                "type": "text",
-                "text": format!("https://example.com/{}\ntranscript tail", "页面".repeat(100)),
-            })])),
-            Ok(CallToolResult {
-                is_error: Some(true),
-                ..result(vec![json!({"type": "text", "text": output})])
-            }),
-            Err(output.clone()),
-        ] {
-            let mut cell = new_active_mcp_tool_call(
-                "browser-call".to_string(),
-                McpInvocation {
-                    server: server.to_string(),
-                    tool: "js".to_string(),
-                    arguments: Some(json!({"title": "Inspect"})),
-                },
-                /*animations_enabled*/ false,
-            );
-            cell.complete(Duration::ZERO, completion);
-            for width in [20, 40, 80] {
-                let compact = cell.compact_hyperlink_lines(width);
-                assert!(compact.len() <= 4);
-                assert!(
-                    compact
-                        .last()
-                        .unwrap()
-                        .line
-                        .to_string()
-                        .ends_with("transcript tail")
-                );
-                let display = cell.display_lines(width);
-                assert_eq!(display.len(), 5); // Header, three output rows, and omission hint.
-                assert!(
-                    display
-                        .iter()
-                        .all(|line| line.width() <= usize::from(width))
-                );
-                assert!(display.last().unwrap().to_string().starts_with("    +"));
-                let transcript = cell
-                    .transcript_lines(width)
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                assert!(
-                    transcript
-                        .split_whitespace()
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                        .contains("transcript tail")
-                );
-            }
-        }
+            .join("\n");
+        assert!(full.contains("example.rs"));
+        assert!(full.contains("result line 15"));
+        assert!(full.contains("result line 29"));
+        snapshots.push((is_error, preview));
     }
+    insta::assert_debug_snapshot!(snapshots);
 }
 
 #[test]
-fn projected_content_preserves_full_rendering() {
+fn projected_content_preserves_width_dependent_rendering() {
     let text = "{\"result\": [1, 2, 3], \"text\": \"long output 🦀\"}";
     let malformed = json!({"type": "image", "data": PNG});
     let invalid_metadata =
@@ -451,23 +287,13 @@ fn code_mode_preserves_text_fields_on_nontext_and_unknown_blocks() {
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join("\n");
-    insta::assert_snapshot!(format!("compact:\n{compact}\n\nhistory:\n{display}\n\ntranscript:\n{transcript}"), @r#"
-    compact:
-    • Called Inspect results
-      └ Returned image
-        image-side output
-        unknown-side output
-
+    insta::assert_snapshot!(format!("history:\n{display}\n\ntranscript:\n{transcript}"), @r#"
     history:
-    • Inspect results
-      └ Returned image
-        image-side output
-        unknown-side output
+    ● node_repl.js · completed (ctrl+t)
 
     transcript:
-    • Called node_repl.js({"title":"Inspect results"})
-      └ Returned image
-        Script completed
+    ● Called node_repl.js({"title":"Inspect results"})
+      └ Script completed
         Output:
         image-side output
         Script completed
@@ -509,17 +335,13 @@ fn code_mode_preserves_text_fields_on_nontext_and_unknown_blocks() {
         .map(ToString::to_string)
         .collect::<Vec<_>>()
         .join("\n");
-    insta::assert_snapshot!(format!("history:\n{display}\n\ntranscript:\n{transcript}"), @r"
+    insta::assert_snapshot!(format!("history:\n{display}\n\ntranscript:\n{transcript}"), @"
     history:
-    • Called cua_repl.js
-      └ Returned image
-        image-side output
-        unknown-side output
+    ● cua_repl.js · completed (ctrl+t)
 
     transcript:
-    • Called cua_repl.js()
-      └ Returned image
-        Script completed
+    ● Called cua_repl.js()
+      └ Script completed
         Output:
         image-side output
         Script completed

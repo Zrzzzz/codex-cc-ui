@@ -1,0 +1,36 @@
+---
+source: tui/src/status_indicator_widget/live_output_tests.rs
+expression: snapshots
+---
+[
+    (
+        "Working",
+        20,
+        "(↓ ~123 tokens · 0s…",
+    ),
+    (
+        "Working",
+        40,
+        "Working (↓ ~123 tokens · 0s • esc)",
+    ),
+    (
+        "Working",
+        80,
+        "Working (↓ ~123 tokens · 0s • esc to interrupt)",
+    ),
+    (
+        "Checking a very long status header with 文件 and more text",
+        20,
+        "(↓ ~123 tokens · 0s…",
+    ),
+    (
+        "Checking a very long status header with 文件 and more text",
+        40,
+        "Checking a v… (↓ ~123 tokens · 0s • esc)",
+    ),
+    (
+        "Checking a very long status header with 文件 and more text",
+        80,
+        "Checking a very long status header with… (↓ ~123 tokens · 0s • esc to interrupt)",
+    ),
+]

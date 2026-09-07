@@ -199,8 +199,8 @@ impl HistoryCell for UserHistoryCell {
             )
             .max(/*other*/ 1);
 
-        let style = history_prompt_style();
-        let element_style = style.fg(accent_color_on(style.bg));
+        let style = Style::default();
+        let element_style = style.fg(Color::Cyan);
 
         let wrapped_images = plain_hyperlink_lines(adaptive_wrap_lines(
             self.image_labels_not_in_message()
@@ -215,7 +215,8 @@ impl HistoryCell for UserHistoryCell {
             return Vec::new();
         }
 
-        let mut lines = vec![HyperlinkLine::new(Line::from("").style(style))];
+        let rule = Line::from("─".repeat(usize::from(width)).dim());
+        let mut lines = vec![HyperlinkLine::new(rule.clone())];
 
         if !wrapped_images.is_empty() {
             lines.extend(prefix_hyperlink_lines(
@@ -240,10 +241,7 @@ impl HistoryCell for UserHistoryCell {
             ));
         }
 
-        lines.push(HyperlinkLine::new(Line::from("").style(style)));
-        for source in lines.iter_mut().filter_map(|line| line.source.as_mut()) {
-            source.right_reserve = 1;
-        }
+        lines.push(HyperlinkLine::new(rule));
         lines
     }
 

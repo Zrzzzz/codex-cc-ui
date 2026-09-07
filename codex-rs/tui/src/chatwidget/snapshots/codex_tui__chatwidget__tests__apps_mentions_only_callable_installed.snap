@@ -2,13 +2,12 @@
 source: tui/src/chatwidget/tests/popups_and_settings.rs
 expression: snapshot
 ---
-› Google Drive  [App] Connected files
-
-  enter insert · esc close
-
+────────────────────────────────────────────────────────────────────────────────
 › $
+────────────────────────────────────────────────────────────────────────────────
+  Google Drive  [App] Connected files
 
-  GPT-5.6-Sol default · /tmp/project
+  Press enter to insert or esc to close
 
 --- plugin authentication ---
   Plugins
