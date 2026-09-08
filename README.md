@@ -36,11 +36,11 @@
 ### 通过 npm 安装发行包
 
 ```sh
-npm install -g https://github.com/Zrzzzz/codex-cc-ui/releases/download/v0.1.0-alpha.1/codex-cc-ui-0.1.0-alpha.1.tgz
+npm install -g codex-cc-ui@alpha
 codex-cc
 ```
 
-这是安装 GitHub Release 中的 npm 格式包，尚未发布到 npm registry。安装后使用独立命令 `codex-cc`，不会覆盖官方 `codex`。`npm install -g @openai/codex` 安装的仍是官方版本。
+从 [npm registry](https://www.npmjs.com/package/codex-cc-ui) 安装当前预发行版本。安装后使用独立命令 `codex-cc`，不会覆盖官方 `codex`。也可从 GitHub Release 下载 `.tgz` 包安装；`npm install -g @openai/codex` 安装的仍是官方版本。
 
 ### 下载独立压缩包
 
