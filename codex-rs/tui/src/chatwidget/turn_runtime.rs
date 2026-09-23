@@ -150,7 +150,7 @@ impl ChatWidget {
         self.flush_interrupt_activity();
         self.finish_dynamic_activity();
         self.flush_unified_exec_wait_streak();
-        self.flush_completed_tool_activity();
+        self.flush_completed_command_activity();
         if !from_replay {
             self.collect_runtime_metrics_delta();
         }

@@ -1266,6 +1266,14 @@ pub(super) fn handle_exec_end(chat: &mut ChatWidget, item: AppServerThreadItem) 
 }
 
 pub(super) fn active_blob(chat: &ChatWidget) -> String {
+    if !chat.transcript.pending_tools.is_empty() {
+        return lines_to_single_string(
+            &chat
+                .transcript
+                .pending_tools
+                .preview_lines(chat.transcript.active_cell.as_deref(), /*width*/ 80),
+        );
+    }
     let lines = chat
         .transcript
         .active_cell

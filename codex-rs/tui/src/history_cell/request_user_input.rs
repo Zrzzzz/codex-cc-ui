@@ -13,10 +13,16 @@ pub(crate) struct RequestUserInputResultCell {
 
 impl HistoryCell for RequestUserInputResultCell {
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        visible_lines(self.display_hyperlink_lines(width))
+        crate::tool_preview::summary(
+            self.transcript_lines(u16::MAX)
+                .into_iter()
+                .next()
+                .unwrap_or_default(),
+            width,
+        )
     }
 
-    fn display_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
+    fn transcript_lines(&self, width: u16) -> Vec<Line<'static>> {
         let width = width.max(1) as usize;
         let total = self.questions.len();
         let answered = self

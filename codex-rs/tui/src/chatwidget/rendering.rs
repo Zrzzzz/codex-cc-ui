@@ -133,30 +133,38 @@ impl ChatWidget {
         }
 
         let active_cell_right_reserve = self.ambient_pet_wrap_reserved_cols();
-        let active_cell_renderable = match &self.transcript.active_cell {
-            Some(cell) => RenderableItem::Owned(Box::new(TranscriptAreaRenderable {
-                child: cell.as_ref(),
-                // The initial header becomes the first history cell, which has no leading separator.
-                top: if cell.as_any().is::<history_cell::SessionHeaderHistoryCell>() {
-                    0
-                } else {
-                    1
-                },
+        let active_cell_renderable = if !self.transcript.pending_tools.is_empty() {
+            RenderableItem::Owned(Box::new(super::tool_activity::ToolActivityPreview {
+                pending: &self.transcript.pending_tools,
+                active: self.transcript.active_cell.as_deref(),
                 right: active_cell_right_reserve,
-                // Externally backed transcript cells can also change viewport height without an
-                // active-cell revision. Spinner cells remain safe because their indicator width
-                // is stable and their display lines are still rebuilt on every frame.
-                persistent_layout: cell.has_stable_transcript_height().then_some(
-                    PersistentActiveCellLayout {
-                        cache: &self.transcript.active_cell_layout,
-                        cell_identity: cell.as_ref() as *const dyn HistoryCell as *const ()
-                            as usize,
-                        revision: self.transcript.active_cell_revision,
-                        render_mode: self.history_render_mode(),
+            }))
+        } else {
+            match &self.transcript.active_cell {
+                Some(cell) => RenderableItem::Owned(Box::new(TranscriptAreaRenderable {
+                    child: cell.as_ref(),
+                    // The initial header becomes the first history cell, which has no leading separator.
+                    top: if cell.as_any().is::<history_cell::SessionHeaderHistoryCell>() {
+                        0
+                    } else {
+                        1
                     },
-                ),
-            })),
-            None => RenderableItem::Owned(Box::new(())),
+                    right: active_cell_right_reserve,
+                    // Externally backed transcript cells can also change viewport height without an
+                    // active-cell revision. Spinner cells remain safe because their indicator width
+                    // is stable and their display lines are still rebuilt on every frame.
+                    persistent_layout: cell.has_stable_transcript_height().then_some(
+                        PersistentActiveCellLayout {
+                            cache: &self.transcript.active_cell_layout,
+                            cell_identity: cell.as_ref() as *const dyn HistoryCell as *const ()
+                                as usize,
+                            revision: self.transcript.active_cell_revision,
+                            render_mode: self.history_render_mode(),
+                        },
+                    ),
+                })),
+                None => RenderableItem::Owned(Box::new(())),
+            }
         };
         let mut flex = FlexRenderable::new();
         flex.push(/*flex*/ 1, active_cell_renderable);

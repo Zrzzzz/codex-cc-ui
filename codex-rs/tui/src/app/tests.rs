@@ -4131,13 +4131,14 @@ async fn inactive_thread_file_change_approval_recovers_buffered_changes() {
     );
 
     app.push_thread_interactive_request(request);
-    let cell = match app_event_rx.try_recv() {
-        Ok(AppEvent::InsertHistoryCell(cell)) => cell,
-        other => panic!("expected patch preview history cell, saw {other:?}"),
-    };
-    let rendered = lines_to_single_string(&cell.display_lines(/*width*/ 80));
+    assert!(app_event_rx.try_recv().is_err());
+    let lines = app
+        .chat_widget
+        .active_cell_transcript_lines(/*width*/ 80)
+        .expect("pending patch preview");
+    let rendered = lines_to_single_string(&lines);
     assert!(rendered.contains("• Added README.md (+1 -0)"));
-    assert!(lines_to_single_string(&cell.transcript_lines(/*width*/ 80)).contains("1 +hello"));
+    assert!(rendered.contains("1 +hello"));
 }
 
 #[tokio::test]
@@ -8701,7 +8702,10 @@ async fn replace_chat_widget_reseeds_collab_agent_metadata_for_replay() {
         /*resume_restored_queue*/ false,
     );
 
-    let mut saw_named_wait = false;
+    let mut saw_named_wait = app
+        .chat_widget
+        .active_cell_transcript_lines(/*width*/ 80)
+        .is_some_and(|lines| lines_to_single_string(&lines).contains("Robie [explorer]"));
     while let Ok(event) = app_event_rx.try_recv() {
         if let AppEvent::InsertHistoryCell(cell) = event {
             let transcript = lines_to_single_string(&cell.transcript_lines(/*width*/ 80));

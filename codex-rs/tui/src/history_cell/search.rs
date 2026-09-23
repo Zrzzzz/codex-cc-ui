@@ -122,6 +122,16 @@ impl WebSearchCell {
 
 impl HistoryCell for WebSearchCell {
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
+        crate::tool_preview::summary(
+            self.transcript_lines(u16::MAX)
+                .into_iter()
+                .next()
+                .unwrap_or_default(),
+            width,
+        )
+    }
+
+    fn transcript_lines(&self, width: u16) -> Vec<Line<'static>> {
         let bullet = if self.completed {
             "•".dim()
         } else {

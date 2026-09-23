@@ -200,6 +200,8 @@ impl ChatWidget {
     }
 
     fn refresh_status_line_from_selections(&mut self, selections: &StatusSurfaceSelections) {
+        self.bottom_pane
+            .set_composer_thread_name(self.thread_name.as_deref().and_then(normalize_thread_name));
         let enabled = !selections.status_line_items.is_empty();
         self.bottom_pane.set_status_line_enabled(enabled);
         if !enabled {

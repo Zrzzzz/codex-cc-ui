@@ -592,7 +592,7 @@ fn image_generation_call_renders_saved_path() {
     );
 
     assert_eq!(
-        render_lines(&cell.display_lines(/*width*/ 80)),
+        render_lines(&cell.transcript_lines(/*width*/ 80)),
         vec![
             "• Generated Image:".to_string(),
             "  └ A tiny blue square".to_string(),
@@ -631,7 +631,8 @@ fn session_configured_event(model: &str) -> ThreadSessionState {
 fn unified_exec_interaction_cell_retains_detailed_input() {
     let input = (1..=16).map(|line| format!("line {line}\n")).collect();
     let cell = new_unified_exec_interaction(Some("cat".to_string()), input);
-    let lines = render_lines(&cell.transcript_lines(/*width*/ 80));
+    let lines = render_transcript(&cell);
+    assert_eq!(cell.display_lines(/*width*/ 80).len(), 1);
     insta::assert_snapshot!(lines.join("\n"), @"
     ↳ Interacted with background terminal · cat
       └ line 1
@@ -1303,14 +1304,10 @@ fn unified_exec_interaction_details_wrap_long_input() {
     ));
 
     let width: u16 = 24;
-    let lines = cell.transcript_hyperlink_lines(width);
-    let logical_height = lines.len() as u16;
-    let paragraph = HyperlinkParagraph::new(&lines, Style::default());
-    let wrapped_height = u16::try_from(paragraph.line_count(width)).unwrap();
-    assert!(
-        wrapped_height > logical_height,
-        "expected wrapped height to exceed logical line count ({logical_height}), got {wrapped_height}"
-    );
+    let logical_height = cell.display_lines(width).len() as u16;
+    let wrapped_height = cell.desired_height(width);
+    assert_eq!((logical_height, wrapped_height), (1, 1));
+    assert!(cell.desired_transcript_height(width) > wrapped_height);
 
     let area = Rect::new(/*x*/ 0, /*y*/ 0, width, wrapped_height);
     let mut buf = ratatui::buffer::Buffer::empty(area);
@@ -1327,7 +1324,7 @@ fn unified_exec_interaction_details_wrap_long_input() {
         })
         .collect::<String>();
     assert!(
-        first_row.contains("Interacted with"),
+        first_row.contains("Interacted"),
         "expected first rendered row to keep the header visible, got: {first_row:?}"
     );
 }
@@ -1405,7 +1402,7 @@ fn web_search_history_cell_truncates() {
             queries: None,
         },
     );
-    let rendered = render_lines(&cell.display_lines(/*width*/ 64));
+    let rendered = render_lines(&cell.transcript_lines(/*width*/ 64));
 
     assert_eq!(
         rendered,
@@ -1424,7 +1421,7 @@ fn web_search_history_cell_short_query_does_not_wrap() {
             queries: None,
         },
     );
-    let rendered = render_lines(&cell.display_lines(/*width*/ 64));
+    let rendered = render_lines(&cell.transcript_lines(/*width*/ 64));
 
     assert_eq!(
         rendered,
@@ -1634,8 +1631,8 @@ fn completed_mcp_tool_call_image_after_text_snapshot() {
     );
     cell.complete(Duration::from_millis(25), Ok(result));
 
-    let rendered = render_lines(&cell.display_lines(/*width*/ 80)).join("\n");
-    insta::assert_snapshot!(rendered);
+    let rendered = render_lines(&extra_cell.display_lines(/*width*/ 80));
+    assert_eq!(rendered, vec!["tool result (image output) (ctrl+t)"]);
 }
 
 #[test]
@@ -1663,8 +1660,8 @@ fn completed_mcp_tool_call_accepts_data_url_image_blocks() {
     );
     cell.complete(Duration::from_millis(25), Ok(result));
 
-    let rendered = render_lines(&cell.display_lines(/*width*/ 80)).join("\n");
-    insta::assert_snapshot!(rendered);
+    let rendered = render_lines(&extra_cell.display_lines(/*width*/ 80));
+    assert_eq!(rendered, vec!["tool result (image output) (ctrl+t)"]);
 }
 
 #[test]
@@ -1691,8 +1688,8 @@ fn completed_mcp_tool_call_multiple_image_blocks_snapshot() {
     );
     cell.complete(Duration::from_millis(25), Ok(result));
 
-    let rendered = render_lines(&cell.display_lines(/*width*/ 80)).join("\n");
-    insta::assert_snapshot!(rendered);
+    let rendered = render_lines(&extra_cell.display_lines(/*width*/ 80));
+    assert_eq!(rendered, vec!["tool result (image output) (ctrl+t)"]);
 }
 
 #[test]
@@ -2737,7 +2734,7 @@ fn plan_update_does_not_split_url_like_tokens_in_note_or_step() {
     };
 
     let cell = new_plan_update(update);
-    let rendered = render_lines(&cell.display_lines(/*width*/ 30));
+    let rendered = render_lines(&cell.transcript_lines(/*width*/ 30));
 
     assert_eq!(
         rendered

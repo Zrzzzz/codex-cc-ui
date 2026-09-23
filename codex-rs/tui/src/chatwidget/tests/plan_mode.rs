@@ -1785,7 +1785,8 @@ async fn plan_update_renders_history_cell() {
         ],
     };
     chat.on_plan_update(update);
-    let cells = drain_insert_history(&mut rx);
+    chat.flush_active_cell();
+    let cells = drain_insert_history_transcript(&mut rx);
     assert!(!cells.is_empty(), "expected plan update cell to be sent");
     let blob = lines_to_single_string(cells.last().unwrap());
     assert!(

@@ -2,4 +2,4 @@
 source: tui/src/chatwidget/tests/review_mode.rs
 expression: exec_blob
 ---
-● Bash · 1 call · 1 failed (ctrl+t)
+● Ran 1 shell command (ctrl+t)

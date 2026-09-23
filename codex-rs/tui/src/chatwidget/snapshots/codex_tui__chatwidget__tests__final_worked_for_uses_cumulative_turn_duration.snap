@@ -2,7 +2,7 @@
 source: tui/src/chatwidget/tests/exec_flow.rs
 expression: normalize_completion_timestamps(& (combined))
 ---
-● Bash · 1 call · completed (ctrl+t)
+● Ran 1 shell command (ctrl+t)
 
 • Final response.
 

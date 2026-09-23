@@ -592,6 +592,7 @@ impl ChatComposerConfig {
 }
 
 pub(crate) struct ChatComposer {
+    thread_name: Option<String>,
     draft: DraftState,
     popups: PopupState,
     app_event_tx: AppEventSender,
@@ -723,6 +724,7 @@ impl ChatComposer {
         let default_vim_normal_keymap = default_keymap.vim_normal.clone();
 
         let mut this = Self {
+            thread_name: None,
             draft: DraftState::new(),
             popups: PopupState::default(),
             app_event_tx,
@@ -4916,6 +4918,7 @@ impl ChatComposer {
             .borders(ratatui::widgets::Borders::TOP | ratatui::widgets::Borders::BOTTOM)
             .border_style(Style::default().dim())
             .render(composer_rect, buf);
+        thread_title::render(self, composer_rect, buf);
         if !remote_images_rect.is_empty() {
             Paragraph::new(self.attachments.remote_image_lines())
                 .style(style)
@@ -5047,6 +5050,9 @@ mod effort_tests;
 #[cfg(test)]
 #[path = "chat_composer/embedded_input_tests.rs"]
 mod embedded_input_tests;
+
+#[path = "chat_composer_thread_title.rs"]
+mod thread_title;
 
 #[cfg(test)]
 #[path = "chat_composer/paste_tests.rs"]

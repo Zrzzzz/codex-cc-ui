@@ -34,9 +34,7 @@ pub(super) struct StatusCopySource {
 #[derive(Default)]
 pub(super) struct TranscriptState {
     pub(super) active_cell: Option<Box<dyn HistoryCell>>,
-    /// Shared retained rows for concurrently running dynamic tools, removed on completion.
-    pub(super) dynamic_calls:
-        std::collections::HashMap<String, crate::history_cell::DynamicToolCallCell>,
+    pub(super) pending_tools: crate::history_cell::ToolActivityCell,
     /// Monotonic-ish counter used to invalidate transcript overlay caching.
     pub(super) active_cell_revision: u64,
     /// One bounded entry shared by layout and paint across unchanged active-cell frames.

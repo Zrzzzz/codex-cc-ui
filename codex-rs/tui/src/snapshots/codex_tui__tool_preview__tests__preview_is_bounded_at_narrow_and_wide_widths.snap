@@ -6,41 +6,25 @@ expression: snapshots
     (
         1,
         [
-            "●",
-            "C",
-            "a",
-            "l",
             "…",
         ],
     ),
     (
         10,
         [
-            "● Called",
-            "tools.read",
-            "  └ output",
-            "output",
-            "…",
+            "… (ctrl+t)",
         ],
     ),
     (
         20,
         [
-            "● Called tools.read",
-            "  └ output output",
-            "output output output",
-            "output output output",
-            "… (ctrl+t)",
+            "● Called t… (ctrl+t)",
         ],
     ),
     (
         80,
         [
-            "● Called tools.read",
-            "  └ output output output output output output output output output output output",
-            "output output output output output output output output output output output",
-            "output output output output output output output output output output output",
-            "  └ … (ctrl+t to expand)",
+            "● Called tools.read 文件文件文件文件文件文件文件文件文件文件文件文件文… (ctrl+t)",
         ],
     ),
 ]

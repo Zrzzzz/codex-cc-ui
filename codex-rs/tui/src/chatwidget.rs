@@ -448,6 +448,10 @@ use self::status_surfaces::CachedProjectRootName;
 mod thread_title_status;
 mod thread_usage;
 pub(crate) use self::thread_usage::ThreadUsageOutcome;
+mod tokens;
+pub(crate) use self::tokens::TokenActivityView;
+mod other_tool_items;
+mod tool_activity;
 mod tool_lifecycle;
 mod tool_requests;
 mod transcript;
@@ -1240,28 +1244,17 @@ impl ChatWidget {
         self.refresh_thread_usage_if_settlement_due();
     }
 
-    fn flush_active_cell(&mut self) {
-        if let Some(active) = self.transcript.take_active_cell() {
-            self.app_event_tx.send(AppEvent::InsertHistoryCell(active));
-            self.request_pending_usage_output_insertion();
-        }
-    }
-
-    fn has_completed_tool_activity(&self) -> bool {
-        self.transcript.active_cell.as_ref().is_some_and(|cell| {
-            cell.as_any()
-                .downcast_ref::<ExecCell>()
-                .is_some_and(|cell| !cell.is_active())
-                || cell
-                    .as_any()
-                    .downcast_ref::<history_cell::ComputerActivityCell>()
-                    .is_some_and(|cell| !cell.is_active())
-        })
-    }
-
-    fn flush_completed_tool_activity(&mut self) {
-        if self.has_completed_tool_activity() {
+    fn flush_completed_command_activity(&mut self) {
+        if self
+            .transcript
+            .active_cell
+            .as_ref()
+            .and_then(|cell| cell.as_any().downcast_ref::<ExecCell>())
+            .is_some_and(|cell| !cell.is_active())
+        {
             self.flush_active_cell();
+        } else if self.transcript.active_cell.is_none() {
+            self.flush_tool_activity();
         }
     }
 
@@ -1270,20 +1263,14 @@ impl ChatWidget {
     }
 
     fn add_boxed_history(&mut self, cell: Box<dyn HistoryCell>) {
-        let Err(cell) = self.absorb_activity_detail(cell) else {
+        if history_cell::is_tool_activity(cell.as_ref()) {
+            self.retain_active_tool_cell();
+            self.transcript.pending_tools.push(cell.into());
+            self.transcript.needs_final_message_separator = true;
+            self.bump_active_cell_revision();
+            self.request_redraw();
             return;
-        };
-        if let Some(active) = self.take_history_insertion_prefix(cell.as_ref()) {
-            self.app_event_tx.send(AppEvent::InsertHistoryCell(active));
-            self.request_pending_usage_output_insertion();
         }
-        self.app_event_tx.send(AppEvent::InsertHistoryCell(cell));
-    }
-
-    fn take_history_insertion_prefix(
-        &mut self,
-        cell: &dyn HistoryCell,
-    ) -> Option<Box<dyn HistoryCell>> {
         // Keep the placeholder session header as the active cell until real session info arrives,
         // so we can merge headers instead of committing a duplicate box to history.
         let keep_placeholder_header_active = !self.is_session_configured()
@@ -2012,12 +1999,8 @@ impl ChatWidget {
         let mut realtime_cells = self.realtime_conversation.live_transcript_cells();
         let rate_limit_reset_hint = self.pending_rate_limit_reset_hint();
         if cell.is_none()
-            && self
-                .realtime_conversation
-                .live_transcript_cells()
-                .next()
-                .is_none()
-            && self.realtime_conversation.pending_history_cells.is_empty()
+            && self.transcript.pending_tools.is_empty()
+            && token_activity_cell.is_none()
             && rate_limit_reset_hint.is_none()
         {
             return None;
@@ -2058,9 +2041,31 @@ impl ChatWidget {
         &self,
         width: u16,
     ) -> Option<Vec<HyperlinkLine>> {
-        self.active_cell_hyperlink_lines_with(width, |cell, width| {
-            cell.transcript_hyperlink_lines(width)
-        })
+        let mut lines = self
+            .transcript
+            .pending_tools
+            .transcript_hyperlink_lines(width);
+        if let Some(cell) = self.transcript.active_cell.as_ref() {
+            if !lines.is_empty() {
+                lines.push(HyperlinkLine::from(""));
+            }
+            lines.extend(cell.transcript_hyperlink_lines(width));
+        }
+        if let Some(token_activity_cell) = self.pending_token_activity_output() {
+            let token_activity_lines = token_activity_cell.transcript_hyperlink_lines(width);
+            if !token_activity_lines.is_empty() && !lines.is_empty() {
+                lines.push(HyperlinkLine::from(""));
+            }
+            lines.extend(token_activity_lines);
+        }
+        if let Some(rate_limit_reset_hint) = self.pending_rate_limit_reset_hint() {
+            let hint_lines = rate_limit_reset_hint.transcript_hyperlink_lines(width);
+            if !hint_lines.is_empty() && !lines.is_empty() {
+                lines.push(HyperlinkLine::from(""));
+            }
+            lines.extend(hint_lines);
+        }
+        (!lines.is_empty()).then_some(lines)
     }
 
     #[cfg(test)]

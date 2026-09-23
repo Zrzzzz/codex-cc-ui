@@ -2,7 +2,7 @@
 source: tui/src/chatwidget/tests/exec_flow.rs
 expression: "rendered.join(\"\\n---\\n\")"
 ---
-● Bash sleep 5
+● Running 1 shell command… (ctrl+t)
 
 ---
-● Calling server.tool
+● server.tool · running (ctrl+t)

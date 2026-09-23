@@ -1,4 +1,4 @@
-//! Own question-editor creation, restoration, and the collapsed entry point.
+//! Open new question batches by default, retaining manual collapse and restored drafts.
 
 use super::*;
 
@@ -8,7 +8,12 @@ impl BottomPane {
         message_id: &str,
         questions: &[codex_protocol::items::AsyncUserInputQuestion],
     ) {
-        self.question_editor().append(message_id, questions);
+        let editor = self.question_editor();
+        let was_empty = editor.unanswered_count() == 0;
+        editor.append(message_id, questions);
+        if was_empty && editor.unanswered_count() > 0 {
+            editor.set_expanded(/*expanded*/ true);
+        }
         self.schedule_active_view_frame();
         self.request_redraw();
     }

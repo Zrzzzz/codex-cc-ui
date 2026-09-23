@@ -210,97 +210,20 @@ fn activity_marker(start_time: Option<Instant>, animations_enabled: bool) -> Spa
 }
 
 impl HistoryCell for ExecCell {
-    fn append_reasoning(&mut self, cell: Box<dyn HistoryCell>) -> Result<(), Box<dyn HistoryCell>> {
-        if self.is_exploring_cell() {
-            self.group.push_detail(std::sync::Arc::from(cell));
-            Ok(())
-        } else {
-            Err(cell)
-        }
-    }
-
-    fn has_hidden_activity_details(&self, width: u16) -> bool {
-        if self.is_exploring_cell() {
-            return true;
-        }
-        if self.group.calls.iter().any(ExecCall::is_user_shell_command) {
-            // User-shell previews already retain wrapped commands and up to fifty output rows.
-            // Reuse its actual truncation decision instead of comparing differently styled text.
-            return self
-                .command_display_lines_with_hidden_details(width)
-                .hidden_details;
-        }
-        self.command_has_hidden_details(width)
-    }
-
-    fn compact_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
-        if self.group.calls.iter().any(ExecCall::is_user_shell_command) {
-            return self.display_hyperlink_lines(width);
-        }
-        if self.is_exploring_cell() {
-            let mut lines = self.exploring_display_lines(width);
-            lines.truncate(1 + crate::history_cell::activity_preview::DETAIL_PREVIEW_LINES);
-            let failures = self
-                .group
-                .calls
-                .iter()
-                .filter(|call| {
-                    call.output
-                        .as_ref()
-                        .is_some_and(|output| output.exit_code != 0)
-                })
-                .count();
-            if failures > 0
-                && let Some(header) = lines.first_mut()
-            {
-                header
-                    .line
-                    .push_span(format!(" · {failures} failed").red().bold());
-            }
-            lines
-                .into_iter()
-                .map(|line| crate::history_cell::activity_preview::clipped_line(line.line, width))
-                .collect()
-        } else {
-            self.compact_command_lines(width)
-        }
+    fn tool_failure_count(&self) -> usize {
+        self.calls
+            .iter()
+            .filter(|call| {
+                call.output
+                    .as_ref()
+                    .is_some_and(|output| output.exit_code != 0)
+            })
+            .count()
     }
 
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        if !self.is_active() && !self.calls.iter().any(ExecCall::is_user_shell_command) {
-            let failed = self
-                .calls
-                .iter()
-                .filter(|call| {
-                    call.output
-                        .as_ref()
-                        .is_some_and(|output| output.exit_code != 0)
-                })
-                .count();
-            let label = if self.is_exploring_cell() {
-                "Explored"
-            } else {
-                "Bash"
-            };
-            let status = if failed == 0 {
-                "completed".to_string()
-            } else {
-                format!("{failed} failed")
-            };
-            let count = self.calls.len();
-            let noun = if count == 1 { "call" } else { "calls" };
-            return crate::tool_preview::summary(
-                Line::from(vec![
-                    if failed == 0 {
-                        "● ".green()
-                    } else {
-                        "● ".red()
-                    },
-                    label.bold(),
-                    format!(" · {count} {noun} · {status}").dim(),
-                ]),
-                width,
-            );
+        if !self.calls.iter().any(ExecCall::is_user_shell_command) {
+            return super::summary::summary_lines(self, width);
         }
         if self.is_exploring_cell() {
             self.exploring_display_lines(width)
@@ -313,14 +236,43 @@ impl HistoryCell for ExecCell {
         visible_lines(self.transcript_hyperlink_lines(width))
     }
 
-    fn transcript_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
-        self.detailed_hyperlink_lines(width, HistoryRenderMode::Rich)
-    }
-
-    fn activity_ids(&self) -> Vec<String> {
-        self.iter_calls()
-            .map(|call| format!("exec:{}", call.call_id))
-            .collect()
+            if let Some(output) = call.output.as_ref() {
+                if !call.is_unified_exec_interaction() {
+                    let wrap_width = width.max(1) as usize;
+                    let wrap_opts = RtOptions::new(wrap_width);
+                    for unwrapped in output
+                        .transcript_lines()
+                        .map(|line| ansi_escape_line(line.as_ref()))
+                    {
+                        let wrapped = adaptive_wrap_line(&unwrapped, wrap_opts.clone());
+                        push_owned_lines(&wrapped, &mut lines);
+                    }
+                }
+                if let Some(duration) = call.duration {
+                    let duration = format_duration(duration);
+                    let mut result: Line = if output.exit_code == 0 {
+                        Line::from("✓".green().bold())
+                    } else {
+                        Line::from(vec![
+                            "✗".red().bold(),
+                            format!(" ({})", output.exit_code).into(),
+                        ])
+                    };
+                    result.push_span(format!(" • {duration}").dim());
+                    lines.push(result);
+                }
+            }
+        }
+        for command in self.waited_terminals.values() {
+            if !lines.is_empty() {
+                lines.push("".into());
+            }
+            lines.extend(
+                crate::history_cell::new_unified_exec_interaction(command.clone(), String::new())
+                    .transcript_lines(width),
+            );
+        }
+        lines
     }
 
     fn raw_lines(&self) -> Vec<Line<'static>> {
@@ -1157,10 +1109,7 @@ mod tests {
             .map(render_line_text)
             .join("\n");
 
-        insta::assert_snapshot!(rendered, @"
-        ● Exploring
-          └ Read SKILL.md
-        ");
+        insta::assert_snapshot!(rendered, @"● Reading 1 file… (ctrl+t)");
     }
 
     #[test]
@@ -1288,7 +1237,7 @@ mod tests {
 
         let cell = ExecCell::new(call, /*animations_enabled*/ false);
         let rendered: Vec<String> = cell
-            .display_lines(/*width*/ 36)
+            .exploring_display_lines(/*width*/ 36)
             .iter()
             .map(|line| {
                 line.spans

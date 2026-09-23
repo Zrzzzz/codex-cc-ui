@@ -6,31 +6,31 @@ expression: snapshots
     (
         0,
         10,
-        "● Bash · 1\ncall ·\ncompleted\n(ctrl+t)",
+        "… (ctrl+t)",
     ),
     (
         0,
         40,
-        "● Bash · 1 call · completed (ctrl+t)",
+        "● Ran 1 shell command (ctrl+t)",
     ),
     (
         0,
         80,
-        "● Bash · 1 call · completed (ctrl+t)",
+        "● Ran 1 shell command (ctrl+t)",
     ),
     (
         1,
         10,
-        "● Bash · 1\ncall · 1\nfailed\n(ctrl+t)",
+        "… (ctrl+t)",
     ),
     (
         1,
         40,
-        "● Bash · 1 call · 1 failed (ctrl+t)",
+        "● Ran 1 shell command (ctrl+t)",
     ),
     (
         1,
         80,
-        "● Bash · 1 call · 1 failed (ctrl+t)",
+        "● Ran 1 shell command (ctrl+t)",
     ),
 ]

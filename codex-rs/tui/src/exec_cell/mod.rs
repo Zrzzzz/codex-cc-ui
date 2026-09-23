@@ -2,7 +2,7 @@ mod compact;
 mod live_output;
 mod model;
 mod render;
-mod transcript;
+mod summary;
 
 pub(crate) use model::CommandOutput;
 #[cfg(test)]

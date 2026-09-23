@@ -3,11 +3,11 @@ source: tui/src/chatwidget/tests/status_and_layout.rs
 expression: "format!(\"exec running:\\n{exec_running}\\nexec and hook running:\\n{exec_and_hook_running}\\nhistory after exec:\\n{history_after_exec}\\nhook running after exec:\\n{hook_running_after_exec}\\nquiet hook completed:\\n{quiet_hook_completed}\")"
 ---
 exec running:
-● Bash echo done
+● Running 1 shell command… (ctrl+t)
 
 exec and hook running:
 "                                                                                "
-"● Bash echo done                                                                "
+"● Running 1 shell command… (ctrl+t)                                             "
 "                                                                                "
 "• Working (0s • esc to interrupt) · checking output policy                      "
 "                                                                                "
@@ -16,9 +16,10 @@ exec and hook running:
 "────────────────────────────────────────────────────────────────────────────────"
 "  gpt-5.6-sol default · /tmp/project                                            "
 history after exec:
-● Bash · 1 call · completed (ctrl+t)
 
 hook running after exec:
+"                                                                                "
+"● Ran 1 shell command (ctrl+t)                                                  "
 "                                                                                "
 "• Working (0s • esc to interrupt) · checking output policy                      "
 "                                                                                "
@@ -27,6 +28,8 @@ hook running after exec:
 "────────────────────────────────────────────────────────────────────────────────"
 "  gpt-5.6-sol default · /tmp/project                                            "
 quiet hook completed:
+"                                                                                "
+"● Ran 1 shell command (ctrl+t)                                                  "
 "                                                                                "
 "• Working (0s • esc to interrupt)                                               "
 "                                                                                "

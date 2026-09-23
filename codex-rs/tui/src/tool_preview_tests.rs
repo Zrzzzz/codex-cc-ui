@@ -3,6 +3,68 @@ use crate::history_cell::HistoryCell;
 use pretty_assertions::assert_eq;
 
 #[test]
+fn consecutive_commands_share_a_summary_and_keep_transcript_details() {
+    use crate::exec_cell::CommandOutput;
+    use codex_app_server_protocol::CommandExecutionSource;
+    use std::time::Duration;
+
+    let mut cell = crate::exec_cell::new_active_exec_command(
+        "first".into(),
+        vec!["echo first".into()],
+        Vec::new(),
+        CommandExecutionSource::Agent,
+        /*interaction_input*/ None,
+        /*animations_enabled*/ false,
+    );
+    let mut previews = Vec::new();
+    previews.push(cell.display_lines(/*width*/ 80));
+    assert!(cell.complete_call(
+        "first",
+        CommandOutput::new(/*exit_code*/ 0, "first output".into()),
+        Duration::from_secs(1),
+    ));
+    assert!(!cell.should_flush());
+    assert!(cell.add_call(
+        "second".into(),
+        vec!["echo second".into()],
+        Vec::new(),
+        CommandExecutionSource::Agent,
+        /*interaction_input*/ None,
+    ));
+    previews.push(cell.display_lines(/*width*/ 80));
+    assert!(cell.complete_call(
+        "second",
+        CommandOutput::new(/*exit_code*/ 1, "second output".into()),
+        Duration::from_secs(1),
+    ));
+    assert!(!cell.should_flush());
+    previews.push(cell.display_lines(/*width*/ 80));
+    assert!(!cell.add_call(
+        "manual".into(),
+        vec!["echo manual".into()],
+        Vec::new(),
+        CommandExecutionSource::UserShell,
+        /*interaction_input*/ None,
+    ));
+    let transcript = cell.transcript_lines(/*width*/ 80);
+    let text = transcript
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("echo first"));
+    assert!(text.contains("echo second"));
+    assert!(text.contains("first output"));
+    assert!(text.contains("second output"));
+    insta::assert_debug_snapshot!(
+        previews
+            .iter()
+            .map(|lines| lines.iter().map(ToString::to_string).collect::<Vec<_>>())
+            .collect::<Vec<_>>()
+    );
+}
+
+#[test]
 fn finished_commands_hide_details_without_losing_transcript() {
     let mut snapshots = Vec::new();
     for exit_code in [0, 1] {
@@ -45,14 +107,11 @@ fn finished_commands_hide_details_without_losing_transcript() {
 
 #[test]
 fn preview_is_bounded_at_narrow_and_wide_widths() {
-    let source = vec![
-        Line::from("● Called tools.read"),
-        Line::from("  └ ".to_owned() + &"output ".repeat(80)),
-    ];
+    let source = Line::from("● Called tools.read ".to_owned() + &"文件\n".repeat(80));
     let mut snapshots = Vec::new();
     for width in [1, 10, 20, 80] {
-        let preview = collapse(source.clone(), width, /*limit*/ 5);
-        assert!(preview.len() <= 5);
+        let preview = summary(source.clone(), width);
+        assert!(preview.len() <= 1);
         assert!(
             preview
                 .iter()
@@ -68,16 +127,12 @@ fn preview_is_bounded_at_narrow_and_wide_widths() {
 
 #[test]
 fn short_preview_preserves_styles_and_empty_output() {
-    let lines = vec![Line::from("● Error".red()), Line::from("  └ denied")];
-    assert_eq!(collapse(lines.clone(), /*width*/ 80, /*limit*/ 8), lines);
+    let line = Line::from("● Error".red());
     assert_eq!(
-        collapse(Vec::new(), /*width*/ 80, /*limit*/ 8),
-        Vec::<Line>::new()
+        summary(line.clone(), /*width*/ 80),
+        vec![Line::from(vec!["● Error".red(), " (ctrl+t)".dim()])]
     );
-    assert_eq!(
-        collapse(lines, /*width*/ 0, /*limit*/ 8),
-        Vec::<Line>::new()
-    );
+    assert_eq!(summary(line, /*width*/ 0), Vec::<Line>::new());
 }
 
 #[test]
@@ -87,13 +142,15 @@ fn long_urls_and_wide_characters_fit_the_preview() {
         Line::from("文件修改完成 ".repeat(30)),
     ];
     for width in [10, 20, 80] {
-        let preview = collapse(lines.clone(), width, /*limit*/ 8);
-        assert!(preview.len() <= 8);
-        assert!(
-            preview
-                .iter()
-                .all(|line| line.width() <= usize::from(width))
-        );
+        for line in &lines {
+            let preview = summary(line.clone(), width);
+            assert!(preview.len() <= 1);
+            assert!(
+                preview
+                    .iter()
+                    .all(|line| line.width() <= usize::from(width))
+            );
+        }
     }
 }
 

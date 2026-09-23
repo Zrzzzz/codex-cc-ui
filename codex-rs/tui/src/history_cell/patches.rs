@@ -73,131 +73,43 @@ pub(crate) fn new_patch_event(
     }
 }
 
-pub(crate) fn new_patch_apply_failure(stderr: String) -> PatchFailureCell {
-    PatchFailureCell {
-        activity_id: format!("patch-failure:{}", uuid::Uuid::new_v4()),
-        stderr,
+pub(crate) fn new_patch_apply_failure(stderr: String) -> ToolResultCell {
+    let mut lines: Vec<Line<'static>> = Vec::new();
+
+    // Failure title
+    lines.push(Line::from("✘ Failed to apply patch".magenta().bold()));
+
+    if !stderr.trim().is_empty() {
+        let output = output_lines(
+            Some(&CommandOutput::new(/*exit_code*/ 1, stderr)),
+            OutputLinesParams {
+                line_limit: TOOL_CALL_MAX_LINES,
+                only_err: true,
+                include_angle_pipe: true,
+                include_prefix: true,
+            },
+        );
+        lines.extend(output.lines);
     }
+
+    let mut cell = ToolResultCell::new(PlainHistoryCell { lines });
+    cell.failure_count = 1;
+    cell
 }
 
-/// Failed patch attempts retain available diagnostics for local disclosure and full transcript.
-#[derive(Debug)]
-pub(crate) struct PatchFailureCell {
-    activity_id: String,
-    stderr: String,
-}
-
-impl HistoryCell for PatchFailureCell {
-    fn activity_ids(&self) -> Vec<String> {
-        vec![self.activity_id.clone()]
-    }
-
-    fn compact_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
-        let mut lines = self.transcript_hyperlink_lines(width);
-        lines.truncate(1 + super::activity_preview::DETAIL_PREVIEW_LINES);
-        lines
-            .into_iter()
-            .map(|line| super::activity_preview::clipped_line(line.line, width))
-            .collect()
-    }
-
-    fn transcript_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
-        let mut lines = vec![Line::from("✘ Failed to apply patch".magenta().bold()).into()];
-        let error = if self.stderr.trim().is_empty() {
-            "(error details unavailable)"
-        } else {
-            &self.stderr
-        };
-        let mut diagnostics = ansi_escape(&error.replace('\t', "    ")).lines;
-        for line in &mut diagnostics {
-            for span in &mut line.spans {
-                span.style = span.style.add_modifier(Modifier::DIM);
-            }
-        }
-        lines.extend(crate::terminal_hyperlinks::adaptive_wrap_hyperlink_lines(
-            &plain_hyperlink_lines(diagnostics),
-            RtOptions::new(usize::from(width).max(/*other*/ 1))
-                .initial_indent("  └ ".dim().into())
-                .subsequent_indent("    ".into()),
-        ));
-        lines
-    }
-
-    fn raw_lines(&self) -> Vec<Line<'static>> {
-        let mut lines = vec![Line::from("Failed to apply patch")];
-        lines.extend(plain_lines(ansi_escape(&self.stderr).lines));
-        lines
-    }
-
-    fn display_lines(&self, _width: u16) -> Vec<Line<'static>> {
-        let mut lines: Vec<Line<'static>> = Vec::new();
-
-        // Failure title
-        lines.push(Line::from("✘ Failed to apply patch".magenta().bold()));
-
-        if !self.stderr.trim().is_empty() {
-            let output = output_lines(
-                Some(&CommandOutput::new(
-                    /*exit_code*/ 1,
-                    self.stderr.clone(),
-                )),
-                OutputLinesParams {
-                    line_limit: TOOL_CALL_MAX_LINES,
-                    only_err: true,
-                    include_angle_pipe: true,
-                    include_prefix: true,
-                },
-            );
-            lines.extend(output.lines);
-        }
-
-        lines
-    }
-}
-
-#[derive(Debug)]
-pub(crate) struct ViewImageHistoryCell {
-    filename: String,
-    path_label: String,
-}
-
-impl HistoryCell for ViewImageHistoryCell {
-    fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        let line = vec![
-            "• ".dim(),
-            "Viewed image ".bold(),
-            self.filename.replace(['\n', '\r', '\t'], " ").dim(),
-        ]
-        .into();
-        vec![truncate_line_with_ellipsis_if_overflow(
-            line,
-            width as usize,
-        )]
-    }
-
-    fn transcript_lines(&self, width: u16) -> Vec<Line<'static>> {
-        PrefixedWrappedHistoryCell::new(
-            Line::from(vec!["Viewed image ".bold(), self.path_label.clone().dim()]),
-            vec!["• ".dim()],
-            "  ",
-        )
-        .display_lines(width)
-    }
-
-    fn raw_lines(&self) -> Vec<Line<'static>> {
-        vec![Line::from(format!("Viewed image {}", self.path_label))]
-    }
-}
-
-pub(crate) fn new_view_image_tool_call(path: LegacyAppPathString) -> ViewImageHistoryCell {
-    let filename = path
+pub(crate) fn new_view_image_tool_call(path: LegacyAppPathString, cwd: &Path) -> ToolResultCell {
+    let display_path = path
         .to_inferred_path_uri()
-        .and_then(|path| path.basename())
-        .unwrap_or_else(|| path.render_for_ui());
-    ViewImageHistoryCell {
-        filename,
-        path_label: path.into_string(),
-    }
+        .and_then(|path| path.to_abs_path().ok())
+        .map(|path| display_path_for(path.as_path(), cwd))
+        .unwrap_or_else(|| path.into_string());
+
+    let lines: Vec<Line<'static>> = vec![
+        vec!["• ".dim(), "Viewed Image".bold()].into(),
+        vec!["  └ ".dim(), display_path.dim()].into(),
+    ];
+
+    ToolResultCell::new(PlainHistoryCell { lines })
 }
 
 pub(crate) fn new_image_generation_call(
@@ -205,7 +117,7 @@ pub(crate) fn new_image_generation_call(
     status: &str,
     revised_prompt: Option<String>,
     saved_path: Option<AbsolutePathBuf>,
-) -> PlainHistoryCell {
+) -> ToolResultCell {
     let detail = revised_prompt.unwrap_or(call_id);
     let heading = if status == "failed" {
         vec!["✗ ".red().bold(), "Image generation failed".bold()].into()
@@ -220,5 +132,7 @@ pub(crate) fn new_image_generation_call(
         lines.push(vec!["  └ ".dim(), "Saved to: ".dim(), saved_path.into()].into());
     }
 
-    PlainHistoryCell { lines }
+    let mut cell = ToolResultCell::new(PlainHistoryCell { lines });
+    cell.failure_count = usize::from(status == "failed");
+    cell
 }

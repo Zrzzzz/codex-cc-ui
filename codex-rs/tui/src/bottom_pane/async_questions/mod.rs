@@ -1,6 +1,5 @@
 //! Inline editing for asynchronous questions. Legacy request_user_input keeps its own overlay.
-//! Local submissions and committed desktop replies remove questions; arrival never steals focus.
-//! Live turn completion recovers unsent typed drafts before removing pending questions.
+//! Only locally accepted submissions remove questions; the bottom pane opens new batches.
 
 use crate::app_event_sender::AppEventSender;
 use crate::bottom_pane::CancellationEvent;

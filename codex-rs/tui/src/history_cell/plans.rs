@@ -269,11 +269,17 @@ impl HistoryCell for PlanUpdateCell {
     }
 
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        visible_lines(self.display_hyperlink_lines(width))
+        crate::tool_preview::summary(
+            self.transcript_lines(u16::MAX)
+                .into_iter()
+                .next()
+                .unwrap_or_default(),
+            width,
+        )
     }
 
-    fn display_hyperlink_lines(&self, width: u16) -> Vec<HyperlinkLine> {
-        let render_note = |text: &str| -> Vec<HyperlinkLine> {
+    fn transcript_lines(&self, width: u16) -> Vec<Line<'static>> {
+        let render_note = |text: &str| -> Vec<Line<'static>> {
             let wrap_width = width.saturating_sub(4).max(1) as usize;
             let note = HyperlinkLine::new(Line::from(text.to_string().dim().italic()));
             crate::terminal_hyperlinks::adaptive_wrap_hyperlink_lines(
