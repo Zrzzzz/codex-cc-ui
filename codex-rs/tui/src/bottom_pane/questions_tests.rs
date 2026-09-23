@@ -12,10 +12,7 @@ fn questions_flush_buffered_typing_and_record_activity() {
         options: None,
     }];
     pane.push_async_questions("message", &questions);
-    pane.questions
-        .as_mut()
-        .unwrap()
-        .set_expanded(/*expanded*/ true);
+    assert!(pane.questions.as_ref().unwrap().expanded);
     pane.handle_paste("pasted ".into());
     assert!(pane.last_composer_activity_at.is_some());
     pane.last_composer_activity_at = None;
@@ -49,4 +46,28 @@ fn questions_flush_buffered_typing_and_record_activity() {
     editor.set_expanded(/*expanded*/ true);
     editor.append("while-open", &questions);
     assert!(editor.countdown(now).is_none());
+}
+
+#[test]
+fn new_question_batches_reopen_but_replays_preserve_manual_collapse() {
+    let (tx, _rx) = unbounded_channel();
+    let mut pane = super::tests::test_pane(AppEventSender::new(tx));
+    let questions = [codex_protocol::items::AsyncUserInputQuestion {
+        title: "Which way?".into(),
+        options: None,
+    }];
+    pane.push_async_questions("first", &questions);
+    assert!(pane.questions.as_ref().unwrap().expanded);
+    pane.questions
+        .as_mut()
+        .unwrap()
+        .set_expanded(/*expanded*/ false);
+    pane.push_async_questions("first", &questions);
+    assert!(!pane.questions.as_ref().unwrap().expanded);
+    pane.questions.as_mut().unwrap().accept_answer();
+    pane.push_async_questions("first", &questions);
+    assert_eq!(pane.questions.as_ref().unwrap().unanswered_count(), 0);
+    assert!(!pane.questions.as_ref().unwrap().expanded);
+    pane.push_async_questions("second", &questions);
+    assert!(pane.questions.as_ref().unwrap().expanded);
 }

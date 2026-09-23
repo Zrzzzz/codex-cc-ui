@@ -1,0 +1,5 @@
+---
+source: tui/src/exec_cell/summary_tests.rs
+expression: "cell.display_lines(80).iter().map(ToString::to_string).collect::<Vec<_>>().join(\"\\n\")"
+---
+● Read 3 files, ran 1 shell command (ctrl+t)

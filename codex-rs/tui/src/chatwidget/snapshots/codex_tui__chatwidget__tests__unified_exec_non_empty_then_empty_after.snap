@@ -1,8 +1,5 @@
 ---
-source: tui/src/chatwidget/tests.rs
+source: tui/src/chatwidget/tests/exec_flow.rs
 expression: combined
 ---
-↳ Interacted with background terminal · just fix
-  └ pwd
-
-• Waited for background terminal · just fix
+● Tool activity · 2 terminal interactions (ctrl+t)

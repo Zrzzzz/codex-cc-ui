@@ -185,41 +185,20 @@ fn activity_marker(start_time: Option<Instant>, animations_enabled: bool) -> Spa
 }
 
 impl HistoryCell for ExecCell {
+    fn tool_failure_count(&self) -> usize {
+        self.calls
+            .iter()
+            .filter(|call| {
+                call.output
+                    .as_ref()
+                    .is_some_and(|output| output.exit_code != 0)
+            })
+            .count()
+    }
+
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        if !self.is_active() && !self.calls.iter().any(ExecCall::is_user_shell_command) {
-            let failed = self
-                .calls
-                .iter()
-                .filter(|call| {
-                    call.output
-                        .as_ref()
-                        .is_some_and(|output| output.exit_code != 0)
-                })
-                .count();
-            let label = if self.is_exploring_cell() {
-                "Explored"
-            } else {
-                "Bash"
-            };
-            let status = if failed == 0 {
-                "completed".to_string()
-            } else {
-                format!("{failed} failed")
-            };
-            let count = self.calls.len();
-            let noun = if count == 1 { "call" } else { "calls" };
-            return crate::tool_preview::summary(
-                Line::from(vec![
-                    if failed == 0 {
-                        "● ".green()
-                    } else {
-                        "● ".red()
-                    },
-                    label.bold(),
-                    format!(" · {count} {noun} · {status}").dim(),
-                ]),
-                width,
-            );
+        if !self.calls.iter().any(ExecCall::is_user_shell_command) {
+            return super::summary::summary_lines(self, width);
         }
         if self.is_exploring_cell() {
             self.exploring_display_lines(width)
@@ -270,6 +249,15 @@ impl HistoryCell for ExecCell {
                     lines.push(result);
                 }
             }
+        }
+        for command in self.waited_terminals.values() {
+            if !lines.is_empty() {
+                lines.push("".into());
+            }
+            lines.extend(
+                crate::history_cell::new_unified_exec_interaction(command.clone(), String::new())
+                    .transcript_lines(width),
+            );
         }
         lines
     }
@@ -1026,10 +1014,7 @@ mod tests {
             .map(render_line_text)
             .join("\n");
 
-        insta::assert_snapshot!(rendered, @"
-        ● Exploring
-          └ Read SKILL.md
-        ");
+        insta::assert_snapshot!(rendered, @"● Reading 1 file… (ctrl+t)");
     }
 
     #[test]
@@ -1151,7 +1136,7 @@ mod tests {
 
         let cell = ExecCell::new(call, /*animations_enabled*/ false);
         let rendered: Vec<String> = cell
-            .display_lines(/*width*/ 36)
+            .exploring_display_lines(/*width*/ 36)
             .iter()
             .map(|line| {
                 line.spans

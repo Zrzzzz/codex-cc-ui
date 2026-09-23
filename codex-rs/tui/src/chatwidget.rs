@@ -433,6 +433,8 @@ mod thread_usage;
 pub(crate) use self::thread_usage::ThreadUsageOutcome;
 mod tokens;
 pub(crate) use self::tokens::TokenActivityView;
+mod other_tool_items;
+mod tool_activity;
 mod tool_lifecycle;
 mod tool_requests;
 mod transcript;
@@ -1200,14 +1202,6 @@ impl ChatWidget {
         self.refresh_thread_usage_if_settlement_due();
     }
 
-    fn flush_active_cell(&mut self) {
-        if let Some(active) = self.transcript.take_active_cell() {
-            self.transcript.needs_final_message_separator = true;
-            self.app_event_tx.send(AppEvent::InsertHistoryCell(active));
-            self.request_pending_usage_output_insertion();
-        }
-    }
-
     fn flush_completed_command_activity(&mut self) {
         if self
             .transcript
@@ -1217,6 +1211,8 @@ impl ChatWidget {
             .is_some_and(|cell| !cell.is_active())
         {
             self.flush_active_cell();
+        } else if self.transcript.active_cell.is_none() {
+            self.flush_tool_activity();
         }
     }
 
@@ -1225,6 +1221,14 @@ impl ChatWidget {
     }
 
     fn add_boxed_history(&mut self, cell: Box<dyn HistoryCell>) {
+        if history_cell::is_tool_activity(cell.as_ref()) {
+            self.retain_active_tool_cell();
+            self.transcript.pending_tools.push(cell.into());
+            self.transcript.needs_final_message_separator = true;
+            self.bump_active_cell_revision();
+            self.request_redraw();
+            return;
+        }
         // Keep the placeholder session header as the active cell until real session info arrives,
         // so we can merge headers instead of committing a duplicate box to history.
         let keep_placeholder_header_active = !self.is_session_configured()
@@ -1920,7 +1924,11 @@ impl ChatWidget {
         let cell = self.transcript.active_cell.as_ref();
         let token_activity_cell = self.pending_token_activity_output();
         let rate_limit_reset_hint = self.pending_rate_limit_reset_hint();
-        if cell.is_none() && token_activity_cell.is_none() && rate_limit_reset_hint.is_none() {
+        if cell.is_none()
+            && self.transcript.pending_tools.is_empty()
+            && token_activity_cell.is_none()
+            && rate_limit_reset_hint.is_none()
+        {
             return None;
         }
         Some(ActiveCellTranscriptKey {
@@ -1942,8 +1950,14 @@ impl ChatWidget {
         &self,
         width: u16,
     ) -> Option<Vec<HyperlinkLine>> {
-        let mut lines = Vec::new();
+        let mut lines = self
+            .transcript
+            .pending_tools
+            .transcript_hyperlink_lines(width);
         if let Some(cell) = self.transcript.active_cell.as_ref() {
+            if !lines.is_empty() {
+                lines.push(HyperlinkLine::from(""));
+            }
             lines.extend(cell.transcript_hyperlink_lines(width));
         }
         if let Some(token_activity_cell) = self.pending_token_activity_output() {

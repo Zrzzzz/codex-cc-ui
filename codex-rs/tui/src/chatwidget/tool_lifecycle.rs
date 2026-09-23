@@ -70,7 +70,7 @@ impl ChatWidget {
 
     pub(super) fn on_web_search_begin(&mut self, call_id: String) {
         self.flush_answer_stream_with_separator();
-        self.flush_active_cell();
+        self.retain_active_tool_cell();
         self.transcript.active_cell = Some(Box::new(history_cell::new_active_web_search_call(
             call_id,
             String::new(),
@@ -98,7 +98,7 @@ impl ChatWidget {
             cell.update(action.clone(), query.clone());
             cell.complete();
             self.bump_active_cell_revision();
-            self.flush_active_cell();
+            self.retain_active_tool_cell();
             handled = true;
         }
 
@@ -108,7 +108,7 @@ impl ChatWidget {
         self.transcript.had_work_activity = true;
     }
 
-    pub(super) fn on_collab_event(&mut self, cell: PlainHistoryCell) {
+    pub(super) fn on_collab_event(&mut self, cell: history_cell::ToolResultCell) {
         self.flush_answer_stream_with_separator();
         self.add_to_history(cell);
         self.request_redraw();
@@ -141,13 +141,20 @@ impl ChatWidget {
             cached_spawn_request.as_ref(),
             |thread_id| self.collab_agent_metadata(thread_id),
         ) {
+            let mut cell = history_cell::ToolResultCell::new(cell);
+            cell.failure_count = usize::from(matches!(
+                status,
+                CollabAgentToolCallStatus::Failed | CollabAgentToolCallStatus::Interrupted
+            ));
             self.on_collab_event(cell);
+        } else if !matches!(status, CollabAgentToolCallStatus::InProgress) {
+            self.on_other_tool_item(item);
         }
     }
 
     pub(super) fn on_sub_agent_activity(&mut self, item: ThreadItem) {
         if let Some(cell) = multi_agents::sub_agent_activity_history_cell(&item) {
-            self.on_collab_event(cell);
+            self.on_collab_event(history_cell::ToolResultCell::new(cell));
         }
     }
 
@@ -176,7 +183,7 @@ impl ChatWidget {
             return;
         };
         self.flush_answer_stream_with_separator();
-        self.flush_active_cell();
+        self.retain_active_tool_cell();
         self.transcript.active_cell = Some(Box::new(history_cell::new_active_mcp_tool_call(
             id,
             McpInvocation {
@@ -235,7 +242,7 @@ impl ChatWidget {
         {
             Some(cell) if cell.call_id() == id => cell.complete(duration, result),
             _ => {
-                self.flush_active_cell();
+                self.retain_active_tool_cell();
                 let mut cell = history_cell::new_active_mcp_tool_call(
                     id,
                     invocation,
@@ -247,7 +254,7 @@ impl ChatWidget {
             }
         };
 
-        self.flush_active_cell();
+        self.retain_active_tool_cell();
         if let Some(extra) = extra_cell {
             self.add_boxed_history(extra);
         }

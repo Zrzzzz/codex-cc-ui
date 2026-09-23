@@ -11,9 +11,24 @@ impl ChatWidget {
             return;
         };
         self.transcript.needs_final_message_separator = true;
-        let cell = history_cell::new_unified_exec_interaction(wait.command_display, String::new());
-        self.app_event_tx
-            .send(AppEvent::InsertHistoryCell(Box::new(cell)));
+        let exec = self
+            .transcript
+            .active_cell
+            .as_mut()
+            .and_then(|cell| cell.as_any_mut().downcast_mut::<ExecCell>())
+            .filter(|cell| !cell.has_user_shell_command());
+        if let Some(exec) = exec {
+            exec.waited_terminals
+                .insert(wait.process_id, wait.command_display);
+        } else {
+            self.retain_active_tool_cell();
+            let mut cell = ExecCell::new_wait(self.local_settings.tui.animations);
+            cell.waited_terminals
+                .insert(wait.process_id, wait.command_display);
+            self.transcript.active_cell = Some(Box::new(cell));
+        }
+        self.bump_active_cell_revision();
+        self.request_redraw();
         self.restore_reasoning_status_header();
     }
 
@@ -294,7 +309,11 @@ impl ChatWidget {
         {
             self.bump_active_cell_revision();
         } else {
-            self.flush_active_cell();
+            if source == ExecCommandSource::UserShell {
+                self.flush_active_cell();
+            } else {
+                self.retain_active_tool_cell();
+            }
 
             self.transcript.active_cell = Some(Box::new(new_active_exec_command(
                 id,
@@ -369,6 +388,24 @@ impl ChatWidget {
         let is_unified_exec_interaction =
             matches!(source, ExecCommandSource::UnifiedExecInteraction);
         let is_user_shell = source == ExecCommandSource::UserShell;
+        // Unified exec can omit the visible start event. Join a completed group
+        // here as well, without attaching orphan output to running commands.
+        if let Some(cell) = self
+            .transcript
+            .active_cell
+            .as_mut()
+            .and_then(|cell| cell.as_any_mut().downcast_mut::<ExecCell>())
+            && !cell.is_active()
+            && !cell.iter_calls().any(|call| call.call_id == id)
+        {
+            cell.add_call(
+                id.clone(),
+                command.clone(),
+                parsed.clone(),
+                source,
+                /*interaction_input*/ None,
+            );
+        }
         let end_target = match self.transcript.active_cell.as_ref() {
             Some(cell) => match cell.as_any().downcast_ref::<ExecCell>() {
                 Some(exec_cell) if exec_cell.iter_calls().any(|call| call.call_id == id) => {
@@ -404,7 +441,7 @@ impl ChatWidget {
                     let completed = cell.complete_call(&id, output, duration);
                     debug_assert!(completed, "active exec cell should contain {id}");
                     if cell.should_flush() {
-                        self.flush_active_cell();
+                        self.retain_active_tool_cell();
                     } else {
                         self.bump_active_cell_revision();
                         self.request_redraw();
@@ -423,12 +460,12 @@ impl ChatWidget {
                 let completed = orphan.complete_call(&id, output, duration);
                 debug_assert!(completed, "new orphan exec cell should contain {id}");
                 self.transcript.needs_final_message_separator = true;
-                self.app_event_tx
-                    .send(AppEvent::InsertHistoryCell(Box::new(orphan)));
+                self.transcript.pending_tools.push(Arc::new(orphan));
+                self.bump_active_cell_revision();
                 self.request_redraw();
             }
             ExecEndTarget::NewCell => {
-                self.flush_active_cell();
+                self.retain_active_tool_cell();
                 let mut cell = new_active_exec_command(
                     id.clone(),
                     command,

@@ -1,5 +1,5 @@
 //! Inline editing for asynchronous questions. Legacy request_user_input keeps its own overlay.
-//! Only locally accepted submissions remove questions; arrival and expiry never steal focus.
+//! Only locally accepted submissions remove questions; the bottom pane opens new batches.
 
 use crate::app_event_sender::AppEventSender;
 use crate::bottom_pane::CancellationEvent;

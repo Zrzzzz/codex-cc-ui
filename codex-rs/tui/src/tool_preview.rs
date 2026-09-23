@@ -1,7 +1,5 @@
 //! Bounded conversation previews; history cells retain their expanded transcript.
 
-use crate::wrapping::RtOptions;
-use crate::wrapping::word_wrap_lines;
 use ratatui::style::Stylize;
 use ratatui::text::Line;
 
@@ -9,33 +7,20 @@ pub(crate) fn summary(mut line: Line<'static>, width: u16) -> Vec<Line<'static>>
     if width == 0 {
         return Vec::new();
     }
-    line.push_span(" (ctrl+t)".dim());
-    word_wrap_lines([line], RtOptions::new(usize::from(width)))
-}
-
-pub(crate) fn collapse(lines: Vec<Line<'static>>, width: u16, limit: usize) -> Vec<Line<'static>> {
-    if width == 0 || limit == 0 {
-        return Vec::new();
+    for span in &mut line.spans {
+        if span.content.contains(['\n', '\r']) {
+            span.content = span.content.replace(['\n', '\r'], " ").into();
+        }
     }
-    let wrapped = if lines.iter().all(|line| line.width() <= usize::from(width)) {
-        lines
-    } else {
-        word_wrap_lines(&lines, RtOptions::new(usize::from(width)))
-    };
-    if wrapped.len() <= limit {
-        return wrapped;
+    let hint = " (ctrl+t)";
+    let width = usize::from(width);
+    let hint_width = if width > hint.len() { hint.len() } else { 0 };
+    let mut line =
+        crate::line_truncation::truncate_line_with_ellipsis_if_overflow(line, width - hint_width);
+    if hint_width > 0 {
+        line.push_span(hint.dim());
     }
-    let hint = if width >= 28 {
-        "  └ … (ctrl+t to expand)"
-    } else if width >= 12 {
-        "… (ctrl+t)"
-    } else {
-        "…"
-    };
-    let mut preview = wrapped;
-    preview.truncate(limit.saturating_sub(1));
-    preview.push(Line::from(hint.dim()));
-    preview
+    vec![line]
 }
 
 #[cfg(test)]

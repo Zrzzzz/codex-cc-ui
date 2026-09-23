@@ -2,4 +2,4 @@
 source: tui/src/chatwidget/tests/exec_flow.rs
 expression: active_blob(&chat)
 ---
-● Explored · 1 call · completed (ctrl+t)
+● Listed 1 directory (ctrl+t)

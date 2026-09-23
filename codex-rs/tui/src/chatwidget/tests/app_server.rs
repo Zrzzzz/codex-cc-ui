@@ -668,6 +668,7 @@ async fn collab_spawn_end_shows_requested_model_and_effort() {
         /*replay_kind*/ None,
     );
 
+    chat.flush_active_cell();
     let cells = drain_insert_history(&mut rx);
     let rendered = cells
         .iter()
@@ -1048,6 +1049,7 @@ async fn live_app_server_file_change_item_started_preserves_changes() {
         /*replay_kind*/ None,
     );
 
+    chat.flush_active_cell();
     let cells = drain_insert_history(&mut rx);
     assert!(!cells.is_empty(), "expected patch history to be rendered");
     let transcript = lines_to_single_string(cells.last().expect("patch cell"));
@@ -1206,6 +1208,7 @@ async fn live_app_server_sub_agent_activity_renders_once() {
         /*replay_kind*/ None,
     );
 
+    chat.flush_active_cell();
     let cells = drain_insert_history(&mut rx);
     assert_eq!(cells.len(), 1);
     let rendered = lines_to_single_string(&cells[0]);
@@ -1293,6 +1296,7 @@ async fn live_app_server_collab_wait_items_render_history() {
         /*replay_kind*/ None,
     );
 
+    chat.flush_active_cell();
     let combined = drain_insert_history(&mut rx)
         .into_iter()
         .map(|lines| lines_to_single_string(&lines))
@@ -1355,6 +1359,7 @@ async fn live_app_server_collab_spawn_completed_renders_requested_model_and_effo
         /*replay_kind*/ None,
     );
 
+    chat.flush_active_cell();
     let combined = drain_insert_history(&mut rx)
         .into_iter()
         .map(|lines| lines_to_single_string(&lines))

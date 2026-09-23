@@ -1,0 +1,5 @@
+---
+source: tui/src/chatwidget/tests/exec_flow.rs
+expression: active_blob(&chat)
+---
+● Ran 1 shell command, waiting 2 terminals (ctrl+t)

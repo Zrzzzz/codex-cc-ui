@@ -1,9 +1,9 @@
 //! Data model for grouped exec-call history cells in the TUI transcript.
 //!
-//! An `ExecCell` can represent either a single command or an "exploring" group of related read/
-//! list/search commands. The chat widget relies on stable `call_id` matching to route progress and
-//! end events into the right cell, and it treats "call id not found" as a real signal (for
-//! example, an orphan end that should render as a separate history entry).
+//! An `ExecCell` groups consecutive agent commands until other conversation content arrives.
+//! User shell commands remain separate. The chat widget relies on stable `call_id` matching to
+//! route progress and end events into the right cell, and treats "call id not found" as a real
+//! signal (for example, an orphan end that should render as a separate history entry).
 
 use std::borrow::Cow;
 use std::time::Duration;
@@ -75,6 +75,7 @@ pub(crate) struct ExecCall {
 #[derive(Debug)]
 pub(crate) struct ExecCell {
     pub(crate) calls: Vec<ExecCall>,
+    pub(crate) waited_terminals: std::collections::BTreeMap<String, Option<String>>,
     animations_enabled: bool,
 }
 
@@ -82,6 +83,15 @@ impl ExecCell {
     pub(crate) fn new(call: ExecCall, animations_enabled: bool) -> Self {
         Self {
             calls: vec![call],
+            waited_terminals: Default::default(),
+            animations_enabled,
+        }
+    }
+
+    pub(crate) fn new_wait(animations_enabled: bool) -> Self {
+        Self {
+            calls: Vec::new(),
+            waited_terminals: Default::default(),
             animations_enabled,
         }
     }
@@ -104,7 +114,8 @@ impl ExecCell {
             duration: None,
             interaction_input,
         };
-        if self.is_exploring_cell() && Self::is_exploring_call(&call) {
+        if !call.is_user_shell_command() && !self.calls.iter().any(ExecCall::is_user_shell_command)
+        {
             self.calls.push(call);
             true
         } else {
@@ -132,16 +143,12 @@ impl ExecCell {
         true
     }
 
-    pub(crate) fn should_flush(&self) -> bool {
-        if self.calls.iter().any(|call| {
-            call.output
-                .as_ref()
-                .is_some_and(|output| output.exit_code != 0)
-        }) {
-            return !self.is_active();
-        }
+    pub(crate) fn has_user_shell_command(&self) -> bool {
+        self.calls.iter().any(ExecCall::is_user_shell_command)
+    }
 
-        !self.is_exploring_cell() && self.calls.iter().all(|c| c.duration.is_some())
+    pub(crate) fn should_flush(&self) -> bool {
+        self.calls.iter().any(ExecCall::is_user_shell_command) && !self.is_active()
     }
 
     pub(crate) fn mark_failed(&mut self) {

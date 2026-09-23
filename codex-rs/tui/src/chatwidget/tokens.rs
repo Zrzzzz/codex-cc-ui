@@ -220,6 +220,7 @@ impl ChatWidget {
             || self.plan_stream_controller.is_some()
             || self.pending_stream_consolidations > 0
             || self.transcript.active_cell.is_some()
+            || !self.transcript.pending_tools.is_empty()
             || self.active_hook_cell.is_some()
     }
 

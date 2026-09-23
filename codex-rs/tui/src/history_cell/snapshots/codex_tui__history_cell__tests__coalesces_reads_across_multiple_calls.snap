@@ -2,4 +2,4 @@
 source: tui/src/history_cell/tests.rs
 expression: rendered
 ---
-● Explored · 3 calls · completed (ctrl+t)
+● Searched for 1 pattern, read 2 files (ctrl+t)

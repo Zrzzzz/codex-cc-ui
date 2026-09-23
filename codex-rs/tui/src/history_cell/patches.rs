@@ -45,7 +45,7 @@ pub(crate) fn new_patch_event(
     }
 }
 
-pub(crate) fn new_patch_apply_failure(stderr: String) -> PlainHistoryCell {
+pub(crate) fn new_patch_apply_failure(stderr: String) -> ToolResultCell {
     let mut lines: Vec<Line<'static>> = Vec::new();
 
     // Failure title
@@ -64,10 +64,12 @@ pub(crate) fn new_patch_apply_failure(stderr: String) -> PlainHistoryCell {
         lines.extend(output.lines);
     }
 
-    PlainHistoryCell { lines }
+    let mut cell = ToolResultCell::new(PlainHistoryCell { lines });
+    cell.failure_count = 1;
+    cell
 }
 
-pub(crate) fn new_view_image_tool_call(path: LegacyAppPathString, cwd: &Path) -> PlainHistoryCell {
+pub(crate) fn new_view_image_tool_call(path: LegacyAppPathString, cwd: &Path) -> ToolResultCell {
     let display_path = path
         .to_inferred_path_uri()
         .and_then(|path| path.to_abs_path().ok())
@@ -79,7 +81,7 @@ pub(crate) fn new_view_image_tool_call(path: LegacyAppPathString, cwd: &Path) ->
         vec!["  └ ".dim(), display_path.dim()].into(),
     ];
 
-    PlainHistoryCell { lines }
+    ToolResultCell::new(PlainHistoryCell { lines })
 }
 
 pub(crate) fn new_image_generation_call(
@@ -87,7 +89,7 @@ pub(crate) fn new_image_generation_call(
     status: &str,
     revised_prompt: Option<String>,
     saved_path: Option<AbsolutePathBuf>,
-) -> PlainHistoryCell {
+) -> ToolResultCell {
     let detail = revised_prompt.unwrap_or(call_id);
     let heading = if status == "failed" {
         vec!["✗ ".red().bold(), "Image generation failed".bold()].into()
@@ -102,5 +104,7 @@ pub(crate) fn new_image_generation_call(
         lines.push(vec!["  └ ".dim(), "Saved to: ".dim(), saved_path.into()].into());
     }
 
-    PlainHistoryCell { lines }
+    let mut cell = ToolResultCell::new(PlainHistoryCell { lines });
+    cell.failure_count = usize::from(status == "failed");
+    cell
 }

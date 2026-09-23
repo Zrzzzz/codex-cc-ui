@@ -1,0 +1,13 @@
+---
+source: tui/src/chatwidget/tests/tool_activity_tests.rs
+assertion_line: 54
+expression: "render_bottom_popup(&chat, 100)"
+---
+● Tool activity · 1 command · 1 terminal interaction · 1 web call (ctrl+t)
+
+• Working (0s • esc to interrupt)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+› Ask Codex to do anything
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  gpt-5.6-sol default · /tmp/project

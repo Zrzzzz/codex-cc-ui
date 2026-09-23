@@ -19,10 +19,14 @@ use result::McpToolResult;
 mod tests;
 
 #[derive(Debug)]
-struct McpImageOutputCell;
+pub(super) struct McpImageOutputCell;
 
 impl HistoryCell for McpImageOutputCell {
-    fn display_lines(&self, _width: u16) -> Vec<Line<'static>> {
+    fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
+        crate::tool_preview::summary("tool result (image output)".into(), width)
+    }
+
+    fn transcript_lines(&self, _width: u16) -> Vec<Line<'static>> {
         vec!["tool result (image output)".into()]
     }
 
@@ -280,29 +284,27 @@ impl McpToolCallCell {
 }
 
 impl HistoryCell for McpToolCallCell {
+    fn tool_failure_count(&self) -> usize {
+        usize::from(self.success() == Some(false))
+    }
+
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
-        if let Some(success) = self.success() {
-            return crate::tool_preview::summary(
-                Line::from(vec![
-                    if success {
-                        "● ".green()
-                    } else {
-                        "● ".red()
-                    },
-                    format!("{}.{}", self.invocation.server, self.invocation.tool).bold(),
-                    if success {
-                        " · completed".dim()
-                    } else {
-                        " · failed".red()
-                    },
-                ]),
-                width,
-            );
-        }
-        crate::tool_preview::collapse(
-            self.render_lines(width, McpToolCallRenderMode::Display),
+        let status = match self.success() {
+            Some(true) => " · completed".dim(),
+            Some(false) => " · failed".red(),
+            None => " · running".into(),
+        };
+        crate::tool_preview::summary(
+            Line::from(vec![
+                match self.success() {
+                    Some(true) => "● ".green(),
+                    Some(false) => "● ".red(),
+                    None => "● ".dim(),
+                },
+                format!("{}.{}", self.invocation.server, self.invocation.tool).bold(),
+                status,
+            ]),
             width,
-            /*limit*/ 8,
         )
     }
 

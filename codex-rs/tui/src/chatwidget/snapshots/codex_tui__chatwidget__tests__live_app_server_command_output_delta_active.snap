@@ -2,6 +2,4 @@
 source: tui/src/chatwidget/tests/app_server.rs
 expression: active
 ---
-● Bash printf 'stdout\nstderr\n'
-  └ stdout
-    stderr
+● Running 1 shell command… (ctrl+t)

@@ -1230,7 +1230,7 @@ async fn replayed_in_progress_mcp_tool_call_stays_active() {
 
     assert!(drain_insert_history(&mut rx).is_empty());
     let active = active_blob(&chat);
-    assert!(active.contains("Calling"));
+    assert!(active.contains(" · running"));
     assert!(!active.contains("MCP tool call completed without a result"));
 }
 
@@ -1271,6 +1271,7 @@ async fn failed_repl_mcp_tool_call_preserves_status_and_result() {
             /*replay_kind*/ None,
         );
 
+        chat.flush_active_cell();
         let cells = drain_insert_history(&mut rx);
         let [lines] = cells.as_slice() else {
             panic!("expected one completed MCP tool call for {server}");
@@ -1344,6 +1345,7 @@ async fn deferred_mcp_lifecycle_events_keep_fifo_after_stream_finishes() {
 
     assert!(chat.interrupts.is_empty());
     assert!(chat.transcript.active_cell.is_none());
+    chat.flush_active_cell();
     let rendered = drain_insert_history(&mut rx)
         .into_iter()
         .map(|lines| lines_to_single_string(&lines))

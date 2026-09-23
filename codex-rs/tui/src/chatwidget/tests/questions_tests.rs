@@ -14,7 +14,6 @@ fn questions() -> Vec<AsyncUserInputQuestion> {
 async fn unavailable_send_keeps_answer_and_skip_remains_available() {
     let (mut chat, _rx, _op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.add_async_questions("message", &questions());
-    chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
     chat.bottom_pane.handle_paste("kept answer".into());
     chat.blocks_direct_input = true;
     chat.handle_key_event(KeyEvent::from(KeyCode::Enter));
@@ -32,7 +31,6 @@ async fn accepted_question_answer_uses_existing_delivery_and_keeps_main_draft() 
             .set_composer_text("main draft".into(), Vec::new(), Vec::new());
         chat.input_queue.suppress_queue_autosend = queued;
         chat.add_async_questions("message", &questions());
-        chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
         chat.handle_key_event(KeyEvent::from(KeyCode::Enter));
         assert_eq!(question_count(&chat), 2);
         if !queued {
@@ -63,7 +61,6 @@ async fn disconnected_questions_remain_editable_without_sending() {
     let (mut chat, _rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.add_async_questions("message", &questions());
     chat.pause_for_disconnect();
-    chat.handle_disconnected_key(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
     chat.bottom_pane.handle_paste("offline draft".into());
     chat.handle_disconnected_key(KeyEvent::from(KeyCode::Enter));
     assert_eq!(question_count(&chat), 2);
@@ -96,7 +93,6 @@ async fn selected_answers_preserve_long_labels_and_reject_oversized_submissions(
             "message",
             &[question("What next?", Some(vec![label.clone()]))],
         );
-        chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
         insta::assert_snapshot!(snapshot, render_bottom_popup(&chat, /*width*/ 80));
         let saved = question_count(&chat);
         chat.handle_key_event(KeyEvent::from(KeyCode::Enter));
@@ -123,7 +119,6 @@ async fn question_inputs_support_vim_editing_and_search() {
         chat.show_welcome_banner = false;
         chat.bottom_pane.set_vim_enabled(/*enabled*/ true);
         chat.add_async_questions("message", &[question("Which way?", options.clone())]);
-        chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
         if options.is_some() {
             chat.handle_key_event(KeyEvent::from(KeyCode::Char('2')));
         }
@@ -199,7 +194,6 @@ async fn question_history_search_uses_updated_bindings() {
         .unwrap();
         let keymap = RuntimeKeymap::from_config(&config).unwrap();
         chat.apply_keymap_update(config, &keymap);
-        chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
         chat.bottom_pane.record_replayed_user_message_history(
             crate::bottom_pane::HistoryEntry::new("newest answer".into()),
         );
@@ -253,7 +247,6 @@ async fn question_editor_keeps_working_status_and_queued_messages_visible() {
         .push_back(UserMessage::from("queued follow-up".to_string()).into());
     chat.refresh_pending_input_preview();
     chat.add_async_questions("message", &questions());
-    chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
     let open = render_bottom_popup(&chat, /*width*/ 80);
     let open = open.split("\n  1 of 2").next().unwrap().trim_end();
     chat.bottom_pane.set_task_running(/*running*/ false);
@@ -276,7 +269,6 @@ async fn async_questions_reject_blank_answers_but_allow_explicit_skip() {
         let (mut chat, _rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
         chat.thread_id = Some(ThreadId::new());
         chat.add_async_questions("message", &[question("Which way?", options.clone())]);
-        chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
         if options.is_some() {
             chat.handle_key_event(KeyEvent::from(KeyCode::Char('2')));
         }
@@ -314,7 +306,6 @@ fn open_questions(chat: &mut ChatWidget, options: Option<Vec<String>>) {
         "turn",
         /*from_replay*/ false,
     );
-    chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
     render_bottom_popup(chat, /*width*/ 80);
 }
 
@@ -468,7 +459,6 @@ async fn single_question_spacing_with_working_status() {
     let (mut chat, _rx, _ops) = make_chatwidget_manual(/*model_override*/ None).await;
     chat.bottom_pane.set_task_running(/*running*/ true);
     chat.add_async_questions("single", &[question("Only question?", /*options*/ None)]);
-    chat.handle_key_event(KeyEvent::new(KeyCode::Up, KeyModifiers::ALT));
     chat.bottom_pane.handle_paste("A typed answer".into());
     let rendered = render_bottom_popup(&chat, /*width*/ 80);
     let rows: Vec<_> = rendered.lines().collect();
@@ -516,6 +506,7 @@ async fn questions_and_queued_messages_share_the_resolved_shortcut() {
         let hint = binding.display_label();
         assert!(render_bottom_popup(&chat, /*width*/ 100).contains(&hint));
         chat.add_async_questions(&hint, &questions());
+        chat.handle_key_event(KeyEvent::from(KeyCode::Esc));
         assert!(render_bottom_popup(&chat, /*width*/ 100).contains(&format!("{hint} to answer")));
         let (key, modifiers) = binding.parts();
         chat.handle_key_event(KeyEvent::new(key, modifiers));

@@ -3,8 +3,6 @@ source: tui/src/chatwidget/tests/exec_flow.rs
 expression: snapshot
 ---
 History:
-● Bash · 1 call · completed (ctrl+t)
 
 Active:
-● Exploring
-  └ Read null
+● Tool activity · 2 commands (ctrl+t)

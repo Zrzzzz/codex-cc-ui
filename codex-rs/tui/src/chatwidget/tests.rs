@@ -283,3 +283,5 @@ pub(super) use helpers::*;
 
 #[path = "tests/questions_tests.rs"]
 mod questions_tests;
+#[path = "tests/tool_activity_tests.rs"]
+mod tool_activity_tests;

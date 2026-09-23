@@ -113,6 +113,10 @@ mod patches;
 mod plans;
 mod request_user_input;
 mod search;
+mod tool_activity;
+pub(crate) use tool_activity::ToolActivityCell;
+pub(crate) use tool_activity::ToolResultCell;
+pub(crate) use tool_activity::is_tool_activity;
 mod separators;
 mod session;
 mod startup_warnings;
@@ -185,6 +189,11 @@ pub(crate) fn plain_lines(lines: impl IntoIterator<Item = Line<'static>>) -> Vec
 pub(crate) trait HistoryCell: std::fmt::Debug + Send + Sync + Any {
     /// Returns the logical lines for the main chat viewport.
     fn display_lines(&self, width: u16) -> Vec<Line<'static>>;
+
+    /// Number of failed tool operations retained in this cell's compact summary.
+    fn tool_failure_count(&self) -> usize {
+        0
+    }
 
     /// Returns copy-friendly plain logical lines for raw scrollback mode.
     fn raw_lines(&self) -> Vec<Line<'static>>;

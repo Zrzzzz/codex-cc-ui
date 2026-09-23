@@ -1,0 +1,7 @@
+---
+source: tui/src/chatwidget/tests/exec_flow.rs
+expression: history
+---
+[
+    "● Ran 1 shell command (ctrl+t)\n",
+]
