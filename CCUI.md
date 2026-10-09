@@ -12,11 +12,14 @@ Reference: `FammasMaz/pi-cc-tools` at `0d873aa94bcfe77b0aa18344a9f8665a9f274d29`
 
 - Transparent composer and user messages with thin horizontal rules.
 - Solid status dots for shell and MCP calls, green for success and red for failure.
-- Bash labels and grouped read/search history with the existing tree gutter.
-- Compact MCP headers with arguments available in the transcript.
-- Completed agent shell and MCP calls show only status summaries; command text
-  and results are available in the transcript. Running calls retain live previews.
-- Patch history shows file/change statistics without inline diff bodies.
+- Consecutive tool activity shares one row until the next conversation entry,
+  including commands, background terminal waits and input, MCP and dynamic calls,
+  searches, patches, plans, images, and agent activity. Running tools share the
+  row with retained results, and failure counts remain visible.
+- Narrow terminals truncate tool summaries to one row. Ctrl+T retains complete
+  commands, arguments, results, terminal input, and patch details.
+- New asynchronous question batches open automatically. Manually collapsed
+  pending questions and saved answer drafts retain their state.
 - Manually entered shell commands keep their output visible.
 - Live output appears beside `Working`, using Pi's `↓ 123 tokens · elapsed` layout,
   and stays visible while the reply streams. It updates as text and reasoning deltas
@@ -76,3 +79,4 @@ just fmt
 The test command clears terminal-specific environment overrides so color and
 keyboard-hint snapshots use consistent inputs. Padded terminal snapshots retain
 intentional trailing spaces.
+
